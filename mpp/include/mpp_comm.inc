@@ -1,8 +1,6 @@
 ! -*-f90-*-
 
-#ifdef use_libSMA
-#include <mpp_comm_sma.inc>
-#elif defined(use_libMPI)
+#ifdef use_libMPI
 #include <mpp_comm_mpi.inc>
 #else
 #include <mpp_comm_nocomm.inc>

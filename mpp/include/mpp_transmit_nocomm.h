@@ -84,7 +84,6 @@
           call mpp_error( FATAL, 'MPP_TRANSMIT: invalid to_pe.' )
       end if
 
-!do the get: for libSMA, a get means do a wait to ensure put on remote PE is complete
       if( from_pe.GE.0 .AND. from_pe.LT.npes )then
           if( .NOT.allocated(local_data) ) then
              get_data_addr = LOC(get_data)

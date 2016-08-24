@@ -28,11 +28,6 @@
   endif
   call MPI_COMM_RANK( mpp_comm_private, pe,   error )
   call MPI_COMM_SIZE( mpp_comm_private, npes, error )
-#ifdef use_MPI_SMA
-  call SHMEM_BARRIER_ALL()
-  call SHPALLOC( p_pSync, SHMEM_BARRIER_SYNC_SIZE, error, -1 )
-  call SHMEM_BARRIER_ALL()
-#endif
 
   module_is_initialized = .TRUE.
 
@@ -282,32 +277,6 @@ subroutine mpp_exit()
 
   return
 end subroutine mpp_exit
-
-!#######################################################################
-    subroutine mpp_malloc( ptr, newlen, len )
-      integer, intent(in)    :: newlen
-      integer, intent(inout) :: len
-#ifdef use_MPI_SMA
-      real                   :: dummy
-      pointer( ptr, dummy )
-      if( .NOT.module_is_initialized )call mpp_error( FATAL, 'MPP_MALLOC: You must first call mpp_init.' )
-!use existing allocation if it is enough
-      if( newlen.LE.len )return
-
-      call SHMEM_BARRIER_ALL()
-!if the pointer is already allocated, deallocate
-!      if( len.NE.0 )call SHPDEALLC( ptr, error_8, -1 ) !BWA: error_8 instead of error, see PV 682618 (fixed in mpt.1.3.0.1)
-      if( len.NE.0 )call SHPDEALLC( ptr, error, -1 )
-!allocate new length: assume that the array is KIND=8
-      call SHPALLOC( ptr, newlen, error, -1 )
-      len = newlen
-      call SHMEM_BARRIER_ALL()
-#else
-      integer(POINTER_KIND), intent(in) :: ptr
-      call mpp_error( FATAL, 'mpp_malloc: requires use_MPI_SMA' )
-#endif
-      return
-    end subroutine mpp_malloc
 
 #ifdef use_MPI_GSM
 !#######################################################################

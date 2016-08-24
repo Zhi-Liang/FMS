@@ -31,7 +31,7 @@
 !NEW: data may be on compute OR data domain
       logical :: data_has_halos, halos_are_global, x_is_global, y_is_global
       integer :: is, ie, js, je, isd, ied, jsd, jed, isg, ieg, jsg, jeg, ism, iem, jsm, jem
-      integer :: position, errunit
+      integer :: position, errunit, flags
       type(domain2d), pointer :: io_domain=>NULL()
 
       call mpp_clock_begin(mpp_write_clock)
@@ -46,7 +46,12 @@
       call mpp_get_data_domain   ( domain, isd, ied, jsd, jed, x_is_global=x_is_global, &
                                    y_is_global=y_is_global, tile_count=tile_count, position=position )
       call mpp_get_memory_domain ( domain, ism, iem, jsm, jem, position=position )
-
+      
+      if(global_field_on_root_pe) then
+         flags=XUPDATE+YUPDATE+GLOBAL_ROOT_ONLY
+      else
+         flags=XUPDATE+YUPDATE
+      endif
       if( size(data,1).EQ.ie-is+1 .AND. size(data,2).EQ.je-js+1 )then
           data_has_halos = .FALSE.
       else if( size(data,1).EQ.iem-ism+1 .AND. size(data,2).EQ.jem-jsm+1 )then
@@ -73,13 +78,10 @@
               else
                   allocate( gdata(1,1,1))
               endif
-              if(global_field_on_root_pe) then
-                 call mpp_global_field( domain, data, gdata, position = position, &
-                                        flags=XUPDATE+YUPDATE+GLOBAL_ROOT_ONLY,   &
-                                        default_data=default_data)
+              if(present(default_data)) then
+                 call mpp_global_field( domain, data, gdata, flags=flags, position=position, default_data=default_data)
               else
-                 call mpp_global_field( domain, data, gdata, position = position, &
-                                        default_data=default_data)
+                 call mpp_global_field( domain, data, gdata, flags=flags, position=position)
               endif
 !all non-0 PEs have passed their data to PE 0 and may now exit
               if(mpp_file(unit)%write_on_this_pe ) then
@@ -101,13 +103,10 @@
               else
                  allocate( gdata(1,1,1))
               endif
-              if(global_field_on_root_pe) then
-                 call mpp_global_field( io_domain, data, gdata, position = position, &
-                                        flags=XUPDATE+YUPDATE+GLOBAL_ROOT_ONLY,      &
-                                        default_data=default_data)
+              if(present(default_data)) then
+                 call mpp_global_field( io_domain, data, gdata, flags=flags, position=position, default_data=default_data)
               else
-                 call mpp_global_field( io_domain, data, gdata, position = position, &
-                                        default_data=default_data)
+                 call mpp_global_field( io_domain, data, gdata, flags=flags, position=position)
               endif
               io_domain => NULL()
               if(mpp_file(unit)%write_on_this_pe ) then
@@ -146,7 +145,7 @@
 !NEW: data may be on compute OR data domain
       logical :: data_has_halos, halos_are_global, x_is_global, y_is_global
       integer :: is, ie, js, je, isd, ied, jsd, jed, isg, ieg, jsg, jeg, ism, iem, jsm, jem
-      integer :: position, errunit
+      integer :: position, errunit, flags
       type(domain2d), pointer :: io_domain=>NULL()
 
       errunit = stderr()
@@ -161,7 +160,11 @@
       call mpp_get_data_domain   ( domain, isd, ied, jsd, jed, x_is_global=x_is_global, &
                                    y_is_global=y_is_global, tile_count=tile_count, position=position )
       call mpp_get_memory_domain ( domain, ism, iem, jsm, jem, position=position )
-
+      if(global_field_on_root_pe) then
+         flags=XUPDATE+YUPDATE+GLOBAL_ROOT_ONLY
+      else
+         flags=XUPDATE+YUPDATE
+      endif
       if( size(data,1).EQ.ie-is+1 .AND. size(data,2).EQ.je-js+1 )then
           data_has_halos = .FALSE.
       else if( size(data,1).EQ.iem-ism+1 .AND. size(data,2).EQ.jem-jsm+1 )then
@@ -188,13 +191,10 @@
               else
                   allocate( gdata(1,1,1,1))
               endif
-              if(global_field_on_root_pe) then
-                 call mpp_global_field( domain, data, gdata, position = position, &
-                                        flags=XUPDATE+YUPDATE+GLOBAL_ROOT_ONLY, &
-                                        default_data=default_data)
+              if(present(default_data)) then
+                 call mpp_global_field( domain, data, gdata, flags=flags, position=position, default_data=default_data)
               else
-                 call mpp_global_field( domain, data, gdata, position = position, &
-                                        default_data=default_data)
+                 call mpp_global_field( domain, data, gdata, flags=flags, position=position)
               endif
 !all non-0 PEs have passed their data to PE 0 and may now exit
               if(mpp_file(unit)%write_on_this_pe ) then
@@ -216,13 +216,10 @@
               else
                  allocate( gdata(1,1,1,1))
               endif
-              if(global_field_on_root_pe) then
-                 call mpp_global_field( io_domain, data, gdata, position = position, &
-                                        flags=XUPDATE+YUPDATE+GLOBAL_ROOT_ONLY,      &
-                                        default_data=default_data)
+              if(present(default_data)) then
+                 call mpp_global_field( io_domain, data, gdata, flags=flags, position=position, default_data=default_data)
               else
-                 call mpp_global_field( io_domain, data, gdata, position = position, &
-                                        default_data=default_data)
+                 call mpp_global_field( io_domain, data, gdata, flags=flags, position=position)
               endif
               io_domain => NULL()
               if(mpp_file(unit)%write_on_this_pe ) then

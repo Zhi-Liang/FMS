@@ -88,7 +88,6 @@
           call mpp_error( FATAL, 'MPP_TRANSMIT: invalid to_pe.' )
       end if
 
-!do the get: for libSMA, a get means do a wait to ensure put on remote PE is complete
       if( from_pe.GE.0 .AND. from_pe.LT.npes )then
 !receive from from_pe
           if( debug .and. (current_clock.NE.0) )call SYSTEM_CLOCK(start_tick)

@@ -107,7 +107,7 @@ module mpp_mod
 !   It is therefore important to be conscious of the context of a
 !   subroutine or function call, and the implied synchronization. There
 !   are certain calls here (e.g <TT>mpp_declare_pelist, mpp_init,
-!   mpp_malloc, mpp_set_stack_size</TT>) which must be called by all
+!   mpp_set_stack_size</TT>) which must be called by all
 !   PEs. There are others which must be called by a subset of PEs (here
 !   called a <TT>pelist</TT>) which must be called by all the PEs in the
 !   <TT>pelist</TT> (e.g <TT>mpp_max, mpp_sum, mpp_sync</TT>). Still
@@ -151,10 +151,6 @@ module mpp_mod
 
 #include <fms_platform.h>
 
-#if defined(use_libSMA) && defined(sgi_mipspro)
-  use shmem_interface
-#endif
-
 #if defined(use_libMPI) && defined(sgi_mipspro)
   use mpi
 #endif
@@ -175,16 +171,11 @@ module mpp_mod
   use mpp_parameter_mod, only : COMM_TAG_13, COMM_TAG_14, COMM_TAG_15, COMM_TAG_16
   use mpp_parameter_mod, only : COMM_TAG_17, COMM_TAG_18, COMM_TAG_19, COMM_TAG_20
   use mpp_parameter_mod, only : MPP_FILL_INT,MPP_FILL_DOUBLE
-  use mpp_data_mod,      only : stat, mpp_stack, ptr_stack, status, ptr_status, sync, ptr_sync  
-  use mpp_data_mod,      only : mpp_from_pe, ptr_from, remote_data_loc, ptr_remote
+  use mpp_data_mod,      only : stat, mpp_stack
   use mpp_data_mod,      only : mpp_data_version=>version
 
 implicit none
 private
-
-#if defined(use_libSMA) 
-#include <mpp/shmem.fh>
-#endif
 
 #if defined(use_libMPI) && !defined(sgi_mipspro)
 #include <mpif.h>   
@@ -218,7 +209,7 @@ private
 
   !--- public interface from mpp_comm.h ------------------------------
   public :: mpp_chksum, mpp_max, mpp_min, mpp_sum, mpp_transmit, mpp_send, mpp_recv
-  public :: mpp_broadcast, mpp_malloc, mpp_init, mpp_exit
+  public :: mpp_broadcast, mpp_init, mpp_exit
   public :: mpp_gather, mpp_scatter, mpp_alltoall
 #ifdef use_MPI_GSM
   public :: mpp_gsm_malloc, mpp_gsm_free
@@ -237,7 +228,6 @@ private
      integer           :: count
      integer           :: start, log2stride ! dummy variables when libMPI is defined.
      integer           :: id, group         ! MPI communicator and group id for this PE set.
-                                            ! dummy variables when libSMA is defined.
   end type communicator
 
   type :: event
@@ -381,20 +371,6 @@ private
      module procedure rarray_to_char
   end interface
 
-!***********************************************************************
-!
-!    public interface from mpp_comm.h
-!
-!***********************************************************************
-#ifdef use_libSMA
-  !currently SMA contains no generic shmem_wait for different integer kinds:
-  !I have inserted one here
-  interface shmem_integer_wait
-     module procedure shmem_int4_wait_local
-     module procedure shmem_int8_wait_local
-  end interface
-#endif
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !                                                                             !
   !       ROUTINES TO INITIALIZE/FINALIZE MPP MODULE: mpp_init, mpp_exit        !
@@ -436,50 +412,6 @@ private
   !  <TEMPLATE>
   !   call mpp_exit()
   !  </TEMPLATE>
-  ! </SUBROUTINE>
-
-  !#######################################################################
-  ! <SUBROUTINE NAME="mpp_malloc">
-  !  <OVERVIEW>
-  !    Symmetric memory allocation.
-  !  </OVERVIEW>
-  !  <DESCRIPTION>
-  !    This routine is used on SGI systems when <TT>mpp_mod</TT> is
-  !    invoked in the SHMEM library. It ensures that dynamically allocated
-  !    memory can be used with <TT>shmem_get</TT> and
-  !    <TT>shmem_put</TT>. This is called <I>symmetric
-  !    allocation</I> and is described in the
-  !    <TT>intro_shmem</TT> man page. <TT>ptr</TT> is a <I>Cray
-  !    pointer</I> (see the section on <LINK
-  !    SRC="#PORTABILITY">portability</LINK>).  The operation can be expensive
-  !    (since it requires a global barrier). We therefore attempt to re-use
-  !    existing allocation whenever possible. Therefore <TT>len</TT>
-  !    and <TT>ptr</TT> must have the <TT>SAVE</TT> attribute
-  !    in the calling routine, and retain the information about the last call
-  !    to <TT>mpp_malloc</TT>. Additional memory is symmetrically
-  !    allocated if and only if <TT>newlen</TT> exceeds
-  !    <TT>len</TT>.
-  !
-  !    This is never required on Cray PVP or MPP systems. While the T3E
-  !    manpages do talk about symmetric allocation, <TT>mpp_mod</TT>
-  !    is coded to remove this restriction.
-  !
-  !    It is never required if <TT>mpp_mod</TT> is invoked in MPI.
-  !
-  !   This call implies synchronization across all PEs.
-  !  </DESCRIPTION>
-  !  <TEMPLATE>
-  !   call mpp_malloc( ptr, newlen, len )
-  !  </TEMPLATE>
-  !  <IN NAME="ptr">
-  !     a cray pointer, points to a dummy argument in this routine.
-  !  </IN>
-  !  <IN NAME="newlen" TYPE="integer">
-  !     the required allocation length for the pointer ptr
-  !  </IN>
-  !  <IN NAME="len" TYPE="integer">
-  !     the current allocation (0 if unallocated).
-  !  </IN>
   ! </SUBROUTINE>
 
   !#####################################################################
@@ -1215,11 +1147,6 @@ private
   integer, parameter :: MPI_INTEGER8=MPI_INTEGER
 #endif
 #endif /* use_libMPI */
-#ifdef use_MPI_SMA
-#include <mpp/shmem.fh>
-  integer :: pSync(SHMEM_BARRIER_SYNC_SIZE)
-  pointer( p_pSync, pSync ) !used by SHPALLOC
-#endif
 
   integer            :: clock0    !measures total runtime from mpp_init to mpp_exit
   integer            :: mpp_stack_size=0, mpp_stack_hwm=0

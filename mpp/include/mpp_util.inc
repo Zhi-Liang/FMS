@@ -1,9 +1,7 @@
 ! -*-f90-*-
 
 
-#ifdef use_libSMA
-#include <mpp_util_sma.inc>
-#elif defined(use_libMPI)
+#ifdef use_libMPI
 #include <mpp_util_mpi.inc>
 #else
 #include <mpp_util_nocomm.inc>
@@ -502,9 +500,6 @@ end function rarray_to_char
   !    together for the <TT>MPI_COMM_CREATE</TT> call. The parent is
   !    typically <TT>MPI_COMM_WORLD</TT>, though it could also be a subset
   !    that includes all PEs in <TT>pelist</TT>.
-  !  
-  !    The restriction does not apply to SMA but to have uniform code, you
-  !    may as well call it.
   !  
   !    This call implies synchronization across the PEs in the current
   !    pelist, of which <TT>pelist</TT> is a subset.
