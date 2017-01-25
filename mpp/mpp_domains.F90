@@ -116,7 +116,6 @@ module mpp_domains_mod
   use mpi
 #endif
 
-  use ISO_C_BINDING
 
   use mpp_parameter_mod,      only : MPP_DEBUG, MPP_VERBOSE, MPP_DOMAIN_TIME
   use mpp_parameter_mod,      only : GLOBAL_DATA_DOMAIN, CYCLIC_GLOBAL_DOMAIN, GLOBAL,CYCLIC 
@@ -138,6 +137,13 @@ module mpp_domains_mod
   use mpp_mod,                only : mpp_sync, mpp_init, lowercase
   use mpp_mod,                only : input_nml_file
   use mpp_mod,                only : COMM_TAG_1, COMM_TAG_2, COMM_TAG_3, COMM_TAG_4
+  use ISO_C_BINDING,          only : C_F_POINTER, C_PTR, c_null_ptr
+#ifdef __GFORTRAN__
+  use mpp_mod,                only : is_contiguous
+  use mpp_mod,                only : C_LOC => C_LOC_gnu
+#else
+  use ISO_C_BINDING,          only : C_LOC
+#endif
   use mpp_memutils_mod,       only : mpp_memuse_begin, mpp_memuse_end
   use mpp_pset_mod,           only : mpp_pset_init
   use mpp_efp_mod,            only : mpp_reproducing_sum
@@ -277,7 +283,7 @@ module mpp_domains_mod
      integer                     :: sendsize, recvsize
      type(overlap_type), pointer :: send(:) => NULL()
      type(overlap_type), pointer :: recv(:) => NULL()
-     type(overlapSpec),  pointer :: next
+     type(overlapSpec),  pointer :: next => NULL()
   end type overlapSpec
 
   type tile_type
@@ -354,7 +360,7 @@ module mpp_domains_mod
      integer                     :: extra_halo
      type(overlap_type), pointer :: send(:) => NULL()
      type(overlap_type), pointer :: recv(:) => NULL()
-     type(nestSpec),     pointer :: next
+     type(nestSpec),     pointer :: next => NULL()
 
   end type nestSpec
 
@@ -523,7 +529,7 @@ module mpp_domains_mod
   integer                         :: num_update = 0
 
   !--- buffer used in nonb-blocking group halo update
-  real(DOUBLE_KIND), allocatable :: mpp_domains_stack(:)
+  real(DOUBLE_KIND), allocatable, target :: mpp_domains_stack(:)
 
   !-------- The following variables are used in mpp_domains_comm.h
   
@@ -1930,6 +1936,13 @@ module mpp_domains_mod
     module procedure get_field_type_4d
     module procedure get_field_type_5d
   end interface
+
+  interface pointer_rank_remap
+    module procedure point_3D_to_2D
+    module procedure point_3D_to_3D
+    module procedure point_3D_to_4D
+    module procedure point_3D_to_5D
+  end interface 
 
   ! Include variable "version" to be written to log file.
 #include<file_version.h>

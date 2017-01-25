@@ -1516,3 +1516,212 @@ end function rarray_to_char
 
   end subroutine read_ascii_file
   
+
+#ifdef __GFORTRAN__
+  function get_wordlen(field)
+    class(*), intent(in) :: field
+    integer              :: get_wordlen
+    
+     select type(field)
+     type is (REAL(DOUBLE_KIND))
+        get_wordlen = 8
+     type is (REAL(FLOAT_KIND))
+        get_wordlen = 4
+     type is (integer(INT_KIND))
+        get_wordlen = 4
+     class default
+        call mpp_error(FATAL, "get_wordlen: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function get_wordlen
+
+
+  !#######################################################################################
+  function is_contiguous_r8(field, nword)
+    integer          , intent(in) :: nword  
+    REAL(DOUBLE_KIND), intent(in) :: field(nword)
+    logical                             :: is_contiguous_r8
+    integer :: wordlen=8
+
+    if( (LOC(field(nword))-LOC(field(1)))  == (nword-1)*wordlen) then
+       is_contiguous_r8 = .true.
+    else
+       is_contiguous_r8 = .false.
+    endif
+  end function is_contiguous_r8
+
+  function is_contiguous_2d(field)
+    class(*), dimension(:,:), intent(in) :: field
+    logical :: is_contiguous_2d
+
+    select type(field)
+    type is (REAL(DOUBLE_KIND))
+       is_contiguous_2d = is_contiguous_r8(field, size(field))
+    type is (REAL(FLOAT_KIND))
+!       is_contiguous_2d = is_contiguous_r8(field, size(field))
+    type is (integer(INT_KIND))
+!       is_contiguous_2d = is_contiguous_r8(field, size(field))
+    class default
+        call mpp_error(FATAL, "is_contiguous_2d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+    
+  end function is_contiguous_2d
+
+  function is_contiguous_3d(field)
+    class(*), dimension(:,:,:), intent(in) :: field
+    logical :: is_contiguous_3d
+
+    select type(field)
+    type is (REAL(DOUBLE_KIND))
+       is_contiguous_3d = is_contiguous_r8(field, size(field))
+    type is (REAL(FLOAT_KIND))
+!       is_contiguous_3d = is_contiguous_r8(field, size(field))
+    type is (integer(INT_KIND))
+!       is_contiguous_3d = is_contiguous_r8(field, size(field))
+    class default
+        call mpp_error(FATAL, "is_contiguous_3d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function is_contiguous_3d
+
+  function is_contiguous_4d(field)
+    class(*), dimension(:,:,:,:), intent(in) :: field
+    logical :: is_contiguous_4d
+
+    select type(field)
+    type is (REAL(DOUBLE_KIND))
+       is_contiguous_4d = is_contiguous_r8(field, size(field))
+    type is (REAL(FLOAT_KIND))
+!       is_contiguous_2d = is_contiguous_r8(field, size(field))
+    type is (integer(INT_KIND))
+!       is_contiguous_4d = is_contiguous_r8(field, size(field))
+    class default
+        call mpp_error(FATAL, "is_contiguous_4d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function is_contiguous_4d
+
+  function is_contiguous_5d(field)
+    class(*), dimension(:,:,:,:,:), intent(in) :: field
+    logical :: is_contiguous_5d
+
+    select type(field)
+    type is (REAL(DOUBLE_KIND))
+       is_contiguous_5d = is_contiguous_r8(field, size(field))
+    type is (REAL(FLOAT_KIND))
+!       is_contiguous_5d = is_contiguous_r8(field, size(field))
+    type is (integer(INT_KIND))
+!       is_contiguous_5d = is_contiguous_r8(field, size(field))
+    class default
+        call mpp_error(FATAL, "is_contiguous_5d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function is_contiguous_5d
+
+!#####################################################################
+  function get_C_LOC_0d(field)
+     class(*), intent(in) :: field
+     type(C_PTR) :: get_C_LOC_0d
+
+     select type(field)
+     type is (REAL(DOUBLE_KIND))
+        get_C_LOC_0d = C_LOC(field)
+     type is (REAL(FLOAT_KIND))
+        get_C_LOC_0d = C_LOC(field)
+     type is (integer(INT_KIND))
+        get_C_LOC_0d = C_LOC(field)
+     class default
+        call mpp_error(FATAL, "get_C_LOC_0d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function get_C_LOC_0d
+
+  function get_C_LOC_1d(field)
+     class(*), intent(in) :: field(:)
+     type(C_PTR) :: get_C_LOC_1d
+
+     select type(field)
+     type is (REAL(DOUBLE_KIND))
+        get_C_LOC_1d = C_LOC(field)
+     type is (REAL(FLOAT_KIND))
+        get_C_LOC_1d = C_LOC(field)
+     type is (integer(INT_KIND))
+        get_C_LOC_1d = C_LOC(field)
+     class default
+        call mpp_error(FATAL, "get_C_LOC_1d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function get_C_LOC_1d
+
+  function get_C_LOC_2d(field)
+     class(*), intent(in) :: field(:,:)
+     type(C_PTR) :: get_C_LOC_2d
+
+     select type(field)
+     type is (REAL(DOUBLE_KIND))
+        get_C_LOC_2d = C_LOC(field)
+     type is (REAL(FLOAT_KIND))
+        get_C_LOC_2d = C_LOC(field)
+     type is (integer(INT_KIND))
+        get_C_LOC_2d = C_LOC(field)
+     class default
+        call mpp_error(FATAL, "get_C_LOC_2d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function get_C_LOC_2d
+
+  function get_C_LOC_3d(field)
+     class(*), intent(in) :: field(:,:,:)
+     type(C_PTR) :: get_C_LOC_3d
+
+     select type(field)
+     type is (REAL(DOUBLE_KIND))
+        get_C_LOC_3d = C_LOC(field)
+     type is (REAL(FLOAT_KIND))
+        get_C_LOC_3d = C_LOC(field)
+     type is (integer(INT_KIND))
+        get_C_LOC_3d = C_LOC(field)
+     class default
+        call mpp_error(FATAL, "get_C_LOC_3d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function get_C_LOC_3d
+
+  function get_C_LOC_4d(field)
+     class(*), intent(in) :: field(:,:,:,:)
+     type(C_PTR) :: get_C_LOC_4d
+
+     select type(field)
+     type is (REAL(DOUBLE_KIND))
+        get_C_LOC_4d = C_LOC(field)
+     type is (REAL(FLOAT_KIND))
+        get_C_LOC_4d = C_LOC(field)
+     type is (integer(INT_KIND))
+        get_C_LOC_4d = C_LOC(field)
+     class default
+        call mpp_error(FATAL, "get_C_LOC_4d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function get_C_LOC_4d
+
+  function get_C_LOC_5d(field)
+     class(*), intent(in) :: field(:,:,:,:,:)
+     type(C_PTR) :: get_C_LOC_5d
+
+     select type(field)
+     type is (REAL(DOUBLE_KIND))
+        get_C_LOC_5d = C_LOC(field)
+     type is (REAL(FLOAT_KIND))
+        get_C_LOC_5d = C_LOC(field)
+     type is (integer(INT_KIND))
+        get_C_LOC_5d = C_LOC(field)
+     class default
+        call mpp_error(FATAL, "get_C_LOC_5d: field type should be 8 byte real, 4 byte real or 4 byte int, contact developer")
+     end select
+
+  end function get_C_LOC_5d
+
+
+#endif
+
+

@@ -2118,8 +2118,6 @@ end subroutine set_group_update
 
   end function get_field_type_5d
 
-
-
 !#####################################################################
   function mpp_group_update_initialized(group)
      type(mpp_group_update_type), intent(in) :: group

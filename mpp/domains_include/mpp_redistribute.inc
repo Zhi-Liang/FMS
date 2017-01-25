@@ -104,6 +104,7 @@ subroutine mpp_redistribute_2d( domain_in, field_in, domain_out, field_out, comp
    integer     :: isize_in, jsize_in, ksize_in, data_type_in
    integer     :: isize_out, jsize_out, ksize_out, data_type_out
    type(C_PTR) :: cptr_in, cptr_out
+   integer(LONG_KIND) :: f_loc_in, f_loc_out
 
    data_type_in = get_field_type(field_in)
    data_type_out = get_field_type(field_out)
@@ -124,8 +125,11 @@ subroutine mpp_redistribute_2d( domain_in, field_in, domain_out, field_out, comp
       jsize_out = size(field_out,2)
       ksize_out = 1
    endif
-   call mpp_redistribute_core( domain_in, cptr_in, LOC(field_in), isize_in, jsize_in, ksize_in, data_type_in, &
-        domain_out, cptr_out, LOC(field_out), isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
+   
+   f_loc_in = LOC(field_in)
+   f_loc_out = LOC(field_out)
+   call mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
+        domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
    return
 end subroutine mpp_redistribute_2d
 
@@ -139,6 +143,7 @@ subroutine mpp_redistribute_3d( domain_in, field_in, domain_out, field_out, comp
    integer     :: isize_in, jsize_in, ksize_in, data_type_in
    integer     :: isize_out, jsize_out, ksize_out, data_type_out
    type(C_PTR) :: cptr_in, cptr_out
+   integer(LONG_KIND) :: f_loc_in, f_loc_out
 
    data_type_in = get_field_type(field_in)
    data_type_out = get_field_type(field_out)
@@ -159,8 +164,11 @@ subroutine mpp_redistribute_3d( domain_in, field_in, domain_out, field_out, comp
       jsize_out = size(field_out,2)
       ksize_out = size(field_out,3)
    endif
-   call mpp_redistribute_core( domain_in, cptr_in, LOC(field_in), isize_in, jsize_in, ksize_in, data_type_in, &
-        domain_out, cptr_out, LOC(field_out), isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
+
+   f_loc_in = LOC(field_in)
+   f_loc_out = LOC(field_out)
+   call mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
+        domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
 
    return
 end subroutine mpp_redistribute_3d
@@ -175,6 +183,7 @@ subroutine mpp_redistribute_4d( domain_in, field_in, domain_out, field_out, comp
    integer     :: isize_in, jsize_in, ksize_in, data_type_in
    integer     :: isize_out, jsize_out, ksize_out, data_type_out
    type(C_PTR) :: cptr_in, cptr_out
+   integer(LONG_KIND) :: f_loc_in, f_loc_out
 
    data_type_in = get_field_type(field_in)
    data_type_out = get_field_type(field_out)
@@ -195,8 +204,11 @@ subroutine mpp_redistribute_4d( domain_in, field_in, domain_out, field_out, comp
       jsize_out = size(field_out,2)
       ksize_out = size(field_out,3)*size(field_out,4)
    endif
-   call mpp_redistribute_core( domain_in, cptr_in, LOC(field_in), isize_in, jsize_in, ksize_in, data_type_in, &
-        domain_out, cptr_out, LOC(field_out), isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
+
+   f_loc_in = LOC(field_in)
+   f_loc_out = LOC(field_out)
+   call mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
+        domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
 
    return
 end subroutine mpp_redistribute_4d
@@ -211,6 +223,7 @@ subroutine mpp_redistribute_5d( domain_in, field_in, domain_out, field_out, comp
    integer     :: isize_in, jsize_in, ksize_in, data_type_in
    integer     :: isize_out, jsize_out, ksize_out, data_type_out
    type(C_PTR) :: cptr_in, cptr_out
+   integer(LONG_KIND) :: f_loc_in, f_loc_out
 
    data_type_in = get_field_type(field_in)
    data_type_out = get_field_type(field_out)
@@ -231,8 +244,11 @@ subroutine mpp_redistribute_5d( domain_in, field_in, domain_out, field_out, comp
       jsize_out = size(field_out,2)
       ksize_out = size(field_out,3)*size(field_out,4)*size(field_out,5)
    endif
-   call mpp_redistribute_core( domain_in, cptr_in, LOC(field_in), isize_in, jsize_in, ksize_in, data_type_in, &
-        domain_out, cptr_out, LOC(field_out), isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
+
+   f_loc_in = LOC(field_in)
+   f_loc_out = LOC(field_out)
+   call mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
+        domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
 
    return
 end subroutine mpp_redistribute_5d

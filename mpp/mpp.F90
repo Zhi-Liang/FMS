@@ -155,6 +155,7 @@ module mpp_mod
   use mpi
 #endif
 
+  use ISO_C_BINDING
   use mpp_parameter_mod, only : MPP_VERBOSE, MPP_DEBUG, ALL_PES, ANY_PE, NULL_PE
   use mpp_parameter_mod, only : NOTE, WARNING, FATAL, MPP_CLOCK_DETAILED,MPP_CLOCK_SYNC
   use mpp_parameter_mod, only : CLOCK_COMPONENT, CLOCK_SUBCOMPONENT, CLOCK_MODULE_DRIVER
@@ -1083,6 +1084,27 @@ private
      module procedure mpp_chksum_c4_5d
 #endif
   end interface
+
+#ifdef __GFORTRAN__
+  interface is_contiguous
+    module procedure is_contiguous_2d
+    module procedure is_contiguous_3d
+    module procedure is_contiguous_4d
+    module procedure is_contiguous_5d
+  end interface is_contiguous
+  public :: is_contiguous
+
+  interface C_LOC_gnu
+    module procedure get_C_LOC_0d
+    module procedure get_C_LOC_1d
+    module procedure get_C_LOC_2d
+    module procedure get_C_LOC_3d
+    module procedure get_C_LOC_4d
+    module procedure get_C_LOC_5d
+  end interface C_LOC_gnu
+  public C_LOC_gnu
+
+#endif
 
 !***********************************************************************
 !

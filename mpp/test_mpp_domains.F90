@@ -89,7 +89,6 @@ program test
   integer :: outunit, errunit, io_status
   integer :: get_cpu_affinity, base_cpu, omp_get_num_threads, omp_get_thread_num
 
-
   call mpp_memuse_begin()
   call mpp_init()
  
@@ -2472,7 +2471,7 @@ contains
     allocate( a1(ism:iem,      jsm:jem,       nz, num_fields) )  
     allocate( a2(ism:iem,      jsm:jem,       nz, num_fields) )
     allocate( base(isc:iec+shift,jsc:jec+shift,nz) )
-    a1 = 0; x1 = 0; y1 = 0
+    a1 = 0
 
     tile_id = mpp_get_tile_id(domain)
     base = 0

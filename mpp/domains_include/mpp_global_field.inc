@@ -31,6 +31,7 @@ subroutine mpp_global_field_3d( domain, local, global, flags, position,tile_coun
 
   logical :: xonly, yonly, root_only, global_on_this_pe
   integer :: tile, ishift, jshift, stackuse, ipos, jpos, ioff, joff
+  integer :: local_type, global_type, default_type
   real(DOUBLE_KIND) :: default_r8
   real(FLOAT_KIND)  :: default_r4
   character(len=8) :: text
@@ -99,11 +100,15 @@ subroutine mpp_global_field_3d( domain, local, global, flags, position,tile_coun
      call mpp_error( FATAL, 'mpp_global_field_3d: incoming field array must match either compute domain or memory domain.' )
   end if
 
-  if(.not. same_type_as(local, global)) call mpp_error( FATAL, 'mpp_global_field_3d: local and glboal are not the same data type')
+  local_type = get_field_type(local)
+  global_type = get_field_type(global)
+
+  if(local_type .NE. global_type ) call mpp_error( FATAL, 'mpp_global_field_3d: local and glboal are not the same data type')
   default_r8 = 0
   default_r4 = 0
   if(present(default_data)) then
-     if(.not. same_type_as(local, default_data)) call mpp_error( FATAL, &
+     default_type = get_field_type(default_data)
+     if(local_type .NE. default_type) call mpp_error( FATAL, &
            'mpp_global_field_3d: local and default_data are not the same data type')
      select type(default_data)
      type is(real(DOUBLE_KIND))

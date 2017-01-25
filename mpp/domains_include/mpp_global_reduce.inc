@@ -51,9 +51,9 @@ function mpp_global_max_3d( domain, field, locus, position )
   
   select type(field)
   type is(real(DOUBLE_KIND))
-     local = maxval(field(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     local = maxval_r8(field)
   type is(real(FLOAT_KIND))
-     local = maxval(field(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     local = maxval_r4(field)
   class default
      call mpp_error(FATAL, "mpp_global_max_3d: only support 4-byte and 8-byte real, contact developer")
   end select
@@ -70,9 +70,9 @@ function mpp_global_max_3d( domain, field, locus, position )
      if( pe.EQ.here ) then
      select type(field)
      type is(real(DOUBLE_KIND))
-        l_locus = maxloc(field(isc-ioff: iec-ioff, jsc-joff: jec-joff,:))
+        l_locus = maxloc_r8(field)
      type is(real(FLOAT_KIND))
-        l_locus = maxloc(field(isc-ioff: iec-ioff, jsc-joff: jec-joff,:))
+        l_locus = maxloc_r4(field)
      end select
      endif
      l_locus(1) = l_locus(1) + ioff
@@ -83,6 +83,37 @@ function mpp_global_max_3d( domain, field, locus, position )
   mpp_global_max_3d = g_val
 
   return
+
+  contains
+
+     function maxval_r8(data)
+        real(DOUBLE_KIND), intent(in) :: data(:,:,:)
+        real(DOUBLE_KIND)             :: maxval_r8
+
+        maxval_r8 = maxval(data(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     end function maxval_r8
+
+     function maxval_r4(data)
+        real(FLOAT_KIND), intent(in) :: data(:,:,:)
+        real(FLOAT_KIND)             :: maxval_r4
+
+        maxval_r4 = maxval(data(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     end function maxval_r4
+
+     function maxloc_r8(data)
+        real(DOUBLE_KIND), intent(in) :: data(:,:,:)
+        integer, dimension(3)         :: maxloc_r8
+
+        maxloc_r8 = maxloc(data(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     end function maxloc_r8
+
+     function maxloc_r4(data)
+        real(FLOAT_KIND), intent(in) :: data(:,:,:)
+        integer, dimension(3)         :: maxloc_r4
+
+        maxloc_r4 = maxloc(data(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     end function maxloc_r4
+
 end function mpp_global_max_3d
 
 function mpp_global_max_4d( domain, field, locus, position )
@@ -175,7 +206,7 @@ function mpp_global_min_3d( domain, field, locus, position )
   real(DOUBLE_KIND)              :: mpp_global_min_3d
   integer, save :: l_locus(3)
   integer, save :: here               ! need storage class w/ global address
-  integer :: isc, iec, jsc, jec, ioff, joff, nxc, nyc, nxd, nyd
+  integer :: ioff, joff, nxc, nyc, nxd, nyd
   REAL(DOUBLE_KIND)      :: local
   REAL(DOUBLE_KIND),save :: g_val  ! need storage class w/ global address; not sure whether fn result has required class
 
@@ -197,9 +228,9 @@ function mpp_global_min_3d( domain, field, locus, position )
   
   select type(field)
   type is(real(DOUBLE_KIND))
-     local = minval(field(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     local = minval_r8(field)
   type is(real(FLOAT_KIND))
-     local = minval(field(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     local = minval_r4(field)
   class default
      call mpp_error(FATAL, "mpp_global_min_3d: only support 4-byte and 8-byte real, contact developer")
   end select
@@ -216,9 +247,9 @@ function mpp_global_min_3d( domain, field, locus, position )
      if( pe.EQ.here ) then
      select type(field)
      type is(real(DOUBLE_KIND))
-        l_locus = minloc(field(isc-ioff: iec-ioff, jsc-joff: jec-joff,:))
+        l_locus = minloc_r8(field)
      type is(real(FLOAT_KIND))
-        l_locus = minloc(field(isc-ioff: iec-ioff, jsc-joff: jec-joff,:))
+        l_locus = minloc_r4(field)
      end select
      endif
      l_locus(1) = l_locus(1) + ioff
@@ -229,6 +260,37 @@ function mpp_global_min_3d( domain, field, locus, position )
   mpp_global_min_3d = g_val
 
   return
+
+  contains
+
+     function minval_r8(data)
+        real(DOUBLE_KIND), intent(in) :: data(:,:,:)
+        real(DOUBLE_KIND)             :: minval_r8   
+
+        minval_r8 = minval(data(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     end function minval_r8
+
+     function minval_r4(data)
+        real(FLOAT_KIND), intent(in) :: data(:,:,:)
+        real(FLOAT_KIND)             :: minval_r4
+
+        minval_r4 = minval(data(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     end function minval_r4
+
+     function minloc_r8(data)
+        real(DOUBLE_KIND), intent(in) :: data(:,:,:)
+        integer, dimension(3)         :: minloc_r8
+
+        minloc_r8 = minloc(data(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     end function minloc_r8
+
+     function minloc_r4(data)
+        real(FLOAT_KIND), intent(in) :: data(:,:,:)
+        integer, dimension(3)         :: minloc_r4
+
+        minloc_r4 = minloc(data(1+ioff: nxc+ioff, 1+joff: nyc+joff,:))
+     end function minloc_r4
+
 end function mpp_global_min_3d
 
 function mpp_global_min_4d( domain, field, locus, position )
