@@ -2587,12 +2587,14 @@ contains
        call mpp_clock_end(id2)
 
        !--- compare checksum
+       if( n == num_iter ) then
        do l = 1, num_fields
           write(text, '(i3.3)') l
           call compare_checksums(a1(isd:ied,      jsd:jed,      :,l),a2(isd:ied,      jsd:jed,      :,l),type//' CENTER '//text)
           call compare_checksums(x1(isd:ied+shift,jsd:jed,      :,l),x2(isd:ied+shift,jsd:jed,      :,l),type//' CGRID X'//text)
           call compare_checksums(y1(isd:ied,      jsd:jed+shift,:,l),y2(isd:ied,      jsd:jed+shift,:,l),type//' CGRID Y'//text)
        enddo
+       endif
        a1 = 0; x1 = 0; y1 = 0
        do l = 1, num_fields
           a1(isc:iec,      jsc:jec,      :,l) = base(isc:iec,      jsc:jec,      :) + l*1e3
@@ -2604,6 +2606,7 @@ contains
        call mpp_complete_group_update(group_update, domain)
        call mpp_clock_end  (id3)
        !--- compare checksum
+       if( n == num_iter ) then
        do l = 1, num_fields
           write(text, '(i3.3)') l
           call compare_checksums(a1(isd:ied,      jsd:jed,      :,l),a2(isd:ied,      jsd:jed,      :,l), &
@@ -2613,7 +2616,7 @@ contains
           call compare_checksums(y1(isd:ied,      jsd:jed+shift,:,l),y2(isd:ied,      jsd:jed+shift,:,l), &
                                  type//' nonblock CGRID Y'//text)
        enddo
-
+       endif
     enddo
 
     call mpp_clear_group_update(group_update)
@@ -2643,6 +2646,7 @@ contains
              call mpp_complete_group_update(update_list(l), domain)
           enddo
           !--- compare checksum
+          if( n == num_iter ) then
           do l = 1, num_fields
              write(text, '(i3.3)') l
              call compare_checksums(a1(isd:ied,      jsd:jed,      :,l),a2(isd:ied,      jsd:jed,      :,l), &
@@ -2652,7 +2656,7 @@ contains
              call compare_checksums(y1(isd:ied,      jsd:jed+shift,:,l),y2(isd:ied,      jsd:jed+shift,:,l), &
                                     type//' multiple nonblock CGRID Y'//text)
           enddo
-
+          endif
        enddo
     endif
 
@@ -2740,12 +2744,14 @@ contains
        call mpp_clock_end(id2)
 
        !--- compare checksum
+       if( n == num_iter ) then
        do l = 1, num_fields
           write(text, '(i3.3)') l
           call compare_checksums(a1(isd:ied+shift,jsd:jed+shift,:,l),a2(isd:ied+shift,jsd:jed+shift,:,l),type//' CORNER '//text)
           call compare_checksums(x1(isd:ied+shift,jsd:jed+shift,:,l),x2(isd:ied+shift,jsd:jed+shift,:,l),type//' BGRID X'//text)
           call compare_checksums(y1(isd:ied+shift,jsd:jed+shift,:,l),y2(isd:ied+shift,jsd:jed+shift,:,l),type//' BGRID Y'//text)
        enddo
+       endif
 
        a1 = 0; x1 = 0; y1 = 0
        do l = 1, num_fields
@@ -2758,6 +2764,7 @@ contains
        call mpp_complete_group_update(group_update, domain)
        call mpp_clock_end  (id3)
        !--- compare checksum
+       if( n == num_iter ) then
        do l = 1, num_fields
           write(text, '(i3.3)') l
           call compare_checksums(a1(isd:ied+shift,jsd:jed+shift,:,l),a2(isd:ied+shift,jsd:jed+shift,:,l), &
@@ -2767,7 +2774,7 @@ contains
           call compare_checksums(y1(isd:ied+shift,jsd:jed+shift,:,l),y2(isd:ied+shift,jsd:jed+shift,:,l), &
                                  type//' nonblock BGRID Y'//text)
        enddo
-
+       endif
     enddo 
 
     call mpp_clear_group_update(group_update)
