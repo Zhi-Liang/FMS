@@ -3528,33 +3528,6 @@ end subroutine test_halosize_update
     nx = nx_save
     ny = ny_save
 
-    !----------------------------------------------------------------
-    !    test mpp_global_field_ug
-    !----------------------------------------------------------------
-!    call mpp_get_UG_global_domain(UG_domain, lsg, leg)
-!    tile = mpp_get_UG_domain_tile_id(UG_domain)
-!    allocate(g1(lsg:leg,nz), g2(lsg:leg,nz), x1(istart:iend,nz))
-!    g1 = 0
-!    g2 = 0
-!    x1 = 0
-!    do k = 1, nz
-!       do l = lsg, leg
-!          g1(l,k) = tile*1e6 + l + k*1.e-3
-!       enddo
-!       do l = istart, iend
-!          x1(l,k) = g1(l,k)
-!       enddo
-!    enddo
-
-!    call mpp_global_field_ug(UG_domain, x1, g2)
-!    call compare_checksums_2D(g1,g2,type//' global_field_ug 3-D')
-   
-!    g2 = 0.0
-!    call mpp_global_field_ug(UG_domain, x1(:,1), g2(:,1))
-!    call compare_checksums_2D(g1(:,1:1),g2(:,1:1),type//' global_field_ug 2-D')
-    
-!    deallocate(g1,g2,x1)
-
   end subroutine test_unstruct_update
 
 
