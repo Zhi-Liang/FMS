@@ -6,12 +6,15 @@
       integer :: send_start_pos, nsend
       integer :: send_msgsize(2*MAXLIST)
       integer :: send_pe(2*MAXLIST)
-      logical :: send(8), recv(8)
-      integer :: buffer_pos
+      logical :: send_x(8), recv_x(8)
+      logical :: send_y(8), recv_y(8)
+      logical :: nonsym_edge
+      integer :: buffer_pos, isd
       character(len=8) :: text
       integer :: buffer_recv_size, shift
       integer :: nsend_x, nsend_y, nrecv_x, nrecv_y
       integer :: cur_rank, rank_x, rank_y, ind_x, ind_y
+      integer :: whalo_v, ehalo_v
 
       if(num_nonblock_group_update .NE. 0) then
          call mpp_error(FATAL,"mpp_do_updateV: can not be called between mpp_start_group_update/mpp_complete_group_update")
@@ -20,7 +23,7 @@
       if( BTEST(update_flags,NORTH) .AND. BTEST(domain%fold,NORTH) .AND. BTEST(gridtype,SOUTH) ) &
            call mpp_error( FATAL, 'MPP_DO_UPDATE_V: Incompatible grid offset and fold.' )
 
-      call get_send_recv_value(update_flags, send, recv)
+      call get_vector_send_recv_value(update_flags, gridtype, domain%symmetry, nonsym_edge, send_x, send_y, recv_x, recv_y)
 
       l_size = size(xHold,1)
       nlist = size(domain%list(:))
@@ -28,7 +31,8 @@
       nsend_y = update_y%nsend
       nrecv_x = update_x%nrecv
       nrecv_y = update_y%nrecv
-
+      whalo_v = update_x%whalo
+      ehalo_v = update_x%ehalo
       !--- recv
       buffer_pos = 0
       cur_rank = get_rank_recv(domain, update_x, update_y, rank_x, rank_y, ind_x, ind_y) 
@@ -39,7 +43,7 @@
             from_pe = update_x%recv(ind_x)%pe
             do n = 1, update_x%recv(ind_x)%count
                dir = update_x%recv(ind_x)%dir(n)
-               if(recv(dir)) then
+               if(recv_x(dir)) then
                   is = update_x%recv(ind_x)%is(n); ie = update_x%recv(ind_x)%ie(n)
                   js = update_x%recv(ind_x)%js(n); je = update_x%recv(ind_x)%je(n)
                   msgsize = msgsize + (ie-is+1)*(je-js+1)
@@ -57,7 +61,7 @@
             from_pe = update_y%recv(ind_y)%pe
             do n = 1, update_y%recv(ind_y)%count
                dir = update_y%recv(ind_y)%dir(n)
-               if(recv(dir)) then
+               if(recv_y(dir)) then
                   is = update_y%recv(ind_y)%is(n); ie = update_y%recv(ind_y)%ie(n)
                   js = update_y%recv(ind_y)%js(n); je = update_y%recv(ind_y)%je(n)
                   msgsize = msgsize + (ie-is+1)*(je-js+1)
@@ -100,13 +104,13 @@
          if(cur_rank == rank_x) then
             do n = 1, update_x%send(ind_x)%count
                dir = update_x%send(ind_x)%dir(n)
-               if( send(dir) ) msgsize = msgsize +  update_x%send(ind_x)%msgsize(n)
+               if( send_x(dir) ) msgsize = msgsize +  update_x%send(ind_x)%msgsize(n)
             enddo
          endif
          if(cur_rank == rank_y) then
             do n = 1, update_y%send(ind_y)%count
                dir = update_y%send(ind_y)%dir(n)
-               if( send(dir) ) msgsize = msgsize +  update_y%send(ind_y)%msgsize(n)
+               if( send_y(dir) ) msgsize = msgsize +  update_y%send(ind_y)%msgsize(n)
             enddo
          endif
 
@@ -123,7 +127,7 @@
             to_pe = update_x%send(ind_x)%pe
             do n = 1, update_x%send(ind_x)%count
                dir = update_x%send(ind_x)%dir(n)
-               if( send(dir) ) then
+               if( send_x(dir) ) then
                   tMe = update_x%send(ind_x)%tileMe(n)
                   is = update_x%send(ind_x)%is(n); ie = update_x%send(ind_x)%ie(n)
                   js = update_x%send(ind_x)%js(n); je = update_x%send(ind_x)%je(n)
@@ -145,7 +149,7 @@
             to_pe = update_y%send(ind_y)%pe
             do n = 1, update_y%send(ind_y)%count
                dir = update_y%send(ind_y)%dir(n)
-               if( send(dir) ) then
+               if( send_y(dir) ) then
                   tMe = update_y%send(ind_y)%tileMe(n)
                   is = update_y%send(ind_y)%is(n); ie = update_y%send(ind_y)%ie(n)
                   js = update_y%send(ind_y)%js(n); je = update_y%send(ind_y)%je(n)
@@ -196,7 +200,7 @@
          if(cur_rank == rank_y) then
             do n = update_y%recv(ind_y)%count, 1, -1
                dir = update_y%recv(ind_y)%dir(n)
-               if( recv(dir) ) then
+               if( recv_y(dir) ) then
                   tMe = update_y%recv(ind_y)%tileMe(n)
                   is = update_y%recv(ind_y)%is(n); ie = update_y%recv(ind_y)%ie(n)
                   js = update_y%recv(ind_y)%js(n); je = update_y%recv(ind_y)%je(n)
@@ -219,7 +223,7 @@
          if(cur_rank == rank_x) then
             do n = update_x%recv(ind_x)%count, 1, -1
                dir = update_x%recv(ind_x)%dir(n)
-               if( recv(dir) ) then
+               if( recv_x(dir) ) then
                   tMe = update_x%recv(ind_x)%tileMe(n)
                   is = update_x%recv(ind_x)%is(n); ie = update_x%recv(ind_x)%ie(n)
                   js = update_x%recv(ind_x)%js(n); je = update_x%recv(ind_x)%je(n) 

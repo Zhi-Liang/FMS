@@ -1,6 +1,5 @@
 nlist   = size(domain%list(:))
 gridtype = group%gridtype
-if(group%ksize_v > 0) recv = group%recv_v
 
 !--- set reset_index_s and reset_index_v to 0
 group%reset_index_s = 0

@@ -16,7 +16,6 @@
       l_size = size(sHold,1)
   
       call get_send_recv_value(update_flags, send, recv)
-
       !recv
       buffer_pos = 0
       call mpp_clock_begin(recv_clock)

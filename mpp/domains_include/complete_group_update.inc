@@ -1,10 +1,17 @@
+
+whalo_v = group%whalo_v
+ehalo_v = group%ehalo_v
 nsend = group%nsend
 nrecv = group%nrecv
 gridtype = group%gridtype
 update_flags = group%flags_v
 nscalar = group%nscalar
 nvector = group%nvector
-if(nvector > 0) recv = group%recv_v
+if(nvector > 0) then
+   recv_x = group%recv_x
+   recv_y = group%recv_y
+endif
+
 buffer_start_pos = group%buffer_start_pos
 
 if(nrecv>0) then

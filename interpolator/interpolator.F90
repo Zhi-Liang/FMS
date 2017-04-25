@@ -13,7 +13,8 @@ use mpp_mod,           only : mpp_error, &
                               mpp_exit,  &
                               mpp_npes,  &
                               WARNING,   &
-                              NOTE
+                              NOTE,      &
+                              input_nml_file
 use mpp_io_mod,        only : mpp_open,          &
                               mpp_close,         &
                               mpp_get_times,     &
@@ -43,7 +44,9 @@ use diag_manager_mod,  only : diag_manager_init, get_base_time, &
                               diag_axis_init
 use fms_mod,           only : lowercase, write_version_number, &
                               fms_init, &
-                              file_exist, mpp_root_pe, stdlog
+                              file_exist, mpp_root_pe, stdlog, &
+                              open_namelist_file, close_file,  &
+                              check_nml_error
 use horiz_interp_mod,  only : horiz_interp_type, &
                               horiz_interp_new,  &
                               horiz_interp_init, &
@@ -327,6 +330,25 @@ if (.not. module_is_initialized) then
   call fms_init
   call diag_manager_init
   call horiz_interp_init
+
+!--------------------------------------------------------------------
+! namelist input
+!--------------------------------------------------------------------
+
+  if(file_exist('input.nml')) then
+#ifdef INTERNAL_FILE_NML
+      read (input_nml_file, nml=interpolator_nml, iostat=io)
+      ierr = check_nml_error(io,'interpolator_nml')
+#else
+      unit = open_namelist_file('input.nml')
+      ierr=1; do while (ierr /= 0)
+      read(unit, nml = interpolator_nml, iostat=io, end=10)
+      ierr = check_nml_error (io, 'interpolator_nml')
+      end do
+10    call close_file(unit)
+#endif
+  end if
+
 endif
 
 clim_type%separate_time_vary_calc = .false.
@@ -435,7 +457,7 @@ do i = 1, ndim
       call mpp_get_axis_data(axes(i),clim_type%levs)
       clim_type%level_type = PRESSURE
   ! Convert to Pa
-      if( chomp(units) == "mb" .or. chomp(units) == "hPa") then
+      if( lowercase(trim(adjustl(chomp(units)))) == "mb" .or. lowercase(trim(adjustl(chomp(units)))) == "hpa") then
          clim_type%levs = clim_type%levs * 100.
       end if
 ! define the direction of the vertical data axis
@@ -461,7 +483,7 @@ do i = 1, ndim
       call mpp_get_axis_data(axes(i),clim_type%halflevs)
       clim_type%level_type = PRESSURE
   ! Convert to Pa
-      if( chomp(units) == "mb" .or. chomp(units) == "hPa") then
+      if( lowercase(trim(adjustl(chomp(units)))) == "mb" .or. lowercase(trim(adjustl(chomp(units)))) == "hpa") then
          clim_type%halflevs = clim_type%halflevs * 100.
       end if
 ! define the direction of the vertical data axis
@@ -543,9 +565,9 @@ do i = 1, ndim
 !    base_time based on the netcdf info.
 !----------------------------------------------------------------------
         if ( (model_calendar == JULIAN .and.   &
-              trim(file_calendar) == 'julian')  .or. &
+              lowercase(trim(adjustl(file_calendar))) == 'julian')  .or. &
               (model_calendar == NOLEAP .and.   &
-               trim(file_calendar) == 'noleap') )  then
+               lowercase(trim(adjustl(file_calendar))) == 'noleap') )  then
           call mpp_error (NOTE, 'interpolator_mod: Model and file&
                     & calendars are the same for file ' //   &
                     & trim(file_name) // '; no calendar conversion  &
@@ -553,7 +575,7 @@ do i = 1, ndim
           base_time = set_date (fileyr, filemon, fileday, filehr, &
                                 filemin,filesec)
         else if ( (model_calendar == JULIAN .and.   &
-                   trim(file_calendar) == 'noleap')) then  
+                   lowercase(trim(adjustl(file_calendar))) == 'noleap')) then  
           call mpp_error (NOTE, 'interpolator_mod: Using julian &
                             &model calendar and noleap file calendar&
                             & for file ' // trim(file_name) //   &
@@ -561,7 +583,7 @@ do i = 1, ndim
           base_time = set_date_no_leap (fileyr, filemon, fileday,  &
                                         filehr, filemin, filesec)
         else if ( (model_calendar == NOLEAP .and.   &
-                   trim(file_calendar) == 'julian')) then  
+                   lowercase(trim(adjustl(file_calendar))) == 'julian')) then  
           call mpp_error (NOTE, 'interpolator_mod: Using noleap &
                             &model calendar and julian file calendar&
                             & for file ' // trim(file_name) //  &
@@ -641,9 +663,9 @@ do i = 1, ndim
 !    "real" time.
 !--------------------------------------------------------------------
             if ( (model_calendar == JULIAN .and.   &
-                  trim(file_calendar) == 'julian')  .or. &
+                  lowercase(trim(adjustl(file_calendar))) == 'julian')  .or. &
                  (model_calendar == NOLEAP .and.   &
-                  trim(file_calendar) == 'noleap') )  then
+                  lowercase(trim(adjustl(file_calendar))) == 'noleap') )  then
 
 !---------------------------------------------------------------------
 !    no calendar conversion needed.
@@ -657,7 +679,7 @@ do i = 1, ndim
 !    convert file times from noleap to julian.
 !---------------------------------------------------------------------
             else if ( (model_calendar == JULIAN .and.   &
-                       trim(file_calendar) == 'noleap')) then  
+                       lowercase(trim(adjustl(file_calendar))) == 'noleap')) then  
               Noleap_time = set_time (0, INT(time_in(n))) + base_time
               call get_date_no_leap (Noleap_time, yr, mo, dy, hr,  &
                                      mn, sc)
@@ -679,7 +701,7 @@ do i = 1, ndim
 !    convert file times from julian to noleap.
 !---------------------------------------------------------------------
             else if ( (model_calendar == NOLEAP .and.   &
-                       trim(file_calendar) == 'julian')) then  
+                       lowercase(trim(adjustl(file_calendar))) == 'julian')) then  
               Julian_time = set_time (0, INT(time_in(n))) + base_time
               call get_date_julian (Julian_time, yr, mo, dy, hr, mn, sc)
               clim_type%time_slice(n) = set_date_no_leap (yr, mo, dy, &
@@ -938,7 +960,7 @@ if(present(data_names)) then
       NAME_PRESENT = .FALSE.
       do i=1,nvar
          call mpp_get_atts(varfields(i),name=name,ndim=ndim,units=units)
-         if( name == data_names(j) ) then
+         if( lowercase(trim(adjustl(name))) == lowercase(trim(adjustl(data_names(j)))) ) then
             units=chomp(units)
             if (mpp_pe() == 0 ) write(*,*) 'Initializing src field : ',trim(name)
             clim_type%field_name(j) = name
@@ -1043,7 +1065,13 @@ endif
 
 module_is_initialized = .true.
 
+!---------------------------------------------------------------------
+!    write version number and namelist to logfile.
+!---------------------------------------------------------------------
 call write_version_number("INTERPOLATOR_MOD", version)
+
+      if (mpp_pe() == mpp_root_pe() ) &
+                          write (stdlog(), nml=interpolator_nml)
 
 end subroutine interpolator_init
 
@@ -1264,7 +1292,7 @@ character(len=256) :: err_msg
        !++lwh
        if (size(clim_type%time_slice) > 1) then
           call time_interp(Time, clim_type%time_slice, clim_type%tweight, taum, taup, modtime=YEAR, err_msg=err_msg )
-          if(err_msg /= '') then
+          if(trim(err_msg) /= '') then
              call mpp_error(FATAL,'interpolator_timeslice 1: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
           endif
        else
@@ -1275,7 +1303,7 @@ character(len=256) :: err_msg
        !--lwh
     else
        call time_interp(Time, clim_type%time_slice, clim_type%tweight, taum, taup, err_msg=err_msg )
-       if(err_msg /= '') then
+       if(trim(err_msg) /= '') then
           call mpp_error(FATAL,'interpolator_timeslice 2: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
        endif
     endif
@@ -1339,7 +1367,7 @@ character(len=256) :: err_msg
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight3 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
           call mpp_error(FATAL,'interpolator_timeslice 3: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif
 
@@ -1351,7 +1379,7 @@ character(len=256) :: err_msg
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight1 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_timeslice 4: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif
 
@@ -1363,7 +1391,7 @@ character(len=256) :: err_msg
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight2 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_timeslice 5: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif
 
@@ -1571,7 +1599,7 @@ jend = jstart - 1 + size(interp_data,2)
 
   do i= 1,size(clim_type%field_name(:))
 !!++lwh
-   if ( field_name == clim_type%field_name(i) ) then
+   if ( lowercase(trim(adjustl(field_name))) == lowercase(trim(adjustl(clim_type%field_name(i)))) ) then
 !--lwh
     found_field=.true.
     exit 
@@ -1601,7 +1629,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
 !++lwh
        if (size(clim_type%time_slice) > 1) then
           call time_interp(Time, clim_type%time_slice, clim_type%tweight, taum, taup, modtime=YEAR, err_msg=err_msg )
-          if(err_msg /= '') then
+          if(trim(err_msg) /= '') then
              call mpp_error(FATAL,'interpolator_4D 1: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
           endif
        else
@@ -1612,7 +1640,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
 !--lwh
     else
        call time_interp(Time, clim_type%time_slice, clim_type%tweight, taum, taup, err_msg=err_msg )
-       if(err_msg /= '') then
+       if(trim(err_msg) /= '') then
           call mpp_error(FATAL,'interpolator_4D 2: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
        endif
     endif
@@ -1676,7 +1704,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight3 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_4D 3: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
 
@@ -1688,7 +1716,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight1 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_4D 4: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
         month(1) = clim_type%time_slice(indexp+(climatology-1)*12)
@@ -1699,7 +1727,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight2 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_4D 5: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
 
@@ -1865,7 +1893,7 @@ end select
      do i= 1, size(clim_type%field_name(:))
 found = .false.
 do j = 1,size(climo_diag_name(:))
-  if (climo_diag_name(j) .eq. clim_type%field_name(i)) then
+  if (lowercase(trim(adjustl(climo_diag_name(j)))) .eq. lowercase(trim(adjustl(clim_type%field_name(i))))) then
     found = .true.
     exit
   endif
@@ -2001,7 +2029,7 @@ jend = jstart - 1 + size(interp_data,2)
 
 do i= 1,size(clim_type%field_name(:))
 !++lwh
-  if ( field_name == clim_type%field_name(i) ) then
+  if ( lowercase(trim(adjustl(field_name))) == lowercase(trim(adjustl(clim_type%field_name(i)))) ) then
 !--lwh
     found_field=.true.
     if(present(clim_units)) then
@@ -2023,7 +2051,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
 !++lwh
        if (size(clim_type%time_slice) > 1) then
           call time_interp(Time, clim_type%time_slice, clim_type%tweight, taum, taup, modtime=YEAR, err_msg=err_msg )
-          if(err_msg /= '') then
+          if(trim(err_msg) /= '') then
              call mpp_error(FATAL,'interpolator_3D 1: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
           endif
        else
@@ -2034,7 +2062,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
 !--lwh
     else
        call time_interp(Time, clim_type%time_slice, clim_type%tweight, taum, taup, err_msg=err_msg )
-       if(err_msg /= '') then
+       if(trim(err_msg) /= '') then
           call mpp_error(FATAL,'interpolator_3D 2: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
        endif
     endif
@@ -2104,7 +2132,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight3 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_3D 3: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
 
@@ -2116,7 +2144,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight1 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_3D 4: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
 
@@ -2128,7 +2156,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight2 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_3D 5: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
 
@@ -2272,7 +2300,7 @@ end select
 
 found = .false.
 do j = 1,size(climo_diag_name(:))
-  if (climo_diag_name(j) .eq. clim_type%field_name(i)) then
+  if (lowercase(trim(adjustl(climo_diag_name(j)))) .eq. lowercase(trim(adjustl(clim_type%field_name(i))))) then
     found = .true.
     exit
   endif
@@ -2396,7 +2424,7 @@ jend = jstart - 1 + size(interp_data,2)
 
 do i= 1,size(clim_type%field_name(:))
 !++lwh
-  if ( field_name == clim_type%field_name(i) ) then
+  if ( lowercase(trim(adjustl(field_name))) == lowercase(trim(adjustl(clim_type%field_name(i)))) ) then
 !--lwh
 
     found_field=.true.
@@ -2420,7 +2448,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
 !++lwh
        if (size(clim_type%time_slice) > 1) then
           call time_interp(Time, clim_type%time_slice, clim_type%tweight, taum, taup, modtime=YEAR, err_msg=err_msg )
-          if(err_msg /= '') then
+          if(trim(err_msg) /= '') then
              call mpp_error(FATAL,'interpolator_2D 1: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
           endif
        else
@@ -2431,7 +2459,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
 !--lwh
     else
        call time_interp(Time, clim_type%time_slice, clim_type%tweight, taum, taup, err_msg=err_msg )
-       if(err_msg /= '') then
+       if(trim(err_msg) /= '') then
           call mpp_error(FATAL,'interpolator_2D 2: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
        endif
     endif
@@ -2527,7 +2555,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight3 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_2D 3: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
 
@@ -2539,7 +2567,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight1 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_2D 4: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
 
@@ -2551,7 +2579,7 @@ if ( .not. clim_type%separate_time_vary_calc) then
         if ( .not. retain_cm3_bug ) then
            if (taum==2 .and. taup==2) clim_type%tweight2 = 1. ! protect against post-perth time_interp behavior
         end if
-        if(err_msg /= '') then
+        if(trim(err_msg) /= '') then
            call mpp_error(FATAL,'interpolator_2D 5: '//trim(err_msg)//' file='//trim(clim_type%file_name), FATAL)
         endif    
 
@@ -2670,7 +2698,7 @@ end select
 
 found = .false.
 do j = 1,size(climo_diag_name(:))
-  if (climo_diag_name(j) .eq. clim_type%field_name(i)) then
+  if (lowercase(trim(adjustl(climo_diag_name(j)))) .eq. lowercase(trim(adjustl(clim_type%field_name(i))))) then
     found = .true.
     exit
   endif
@@ -2753,7 +2781,7 @@ if (present(js)) jstart = js
 jend = jstart - 1 + size(interp_data,2)
 
 do i= 1,size(clim_type%field_name(:))
-  if ( field_name == clim_type%field_name(i) ) then
+  if ( lowercase(trim(adjustl(field_name))) == lowercase(trim(adjustl(clim_type%field_name(i)))) ) then
     found_field=.true.
     exit 
   endif
@@ -2886,7 +2914,7 @@ if (present(js)) jstart = js
 jend = jstart - 1 + size(interp_data,2)
 
 do i= 1,size(clim_type%field_name(:))
-  if ( field_name == clim_type%field_name(i) ) then
+  if ( lowercase(trim(adjustl(field_name))) == lowercase(trim(adjustl(clim_type%field_name(i)))) ) then
     found_field=.true.
     if(present(clim_units)) then
       call mpp_get_atts(clim_type%field_type(i),units=clim_units)
@@ -3001,7 +3029,7 @@ if (present(js)) jstart = js
 jend = jstart - 1 + size(interp_data,2)
 
 do i= 1,size(clim_type%field_name(:))
-  if ( field_name == clim_type%field_name(i) ) then
+  if ( lowercase(trim(adjustl(field_name))) == lowercase(trim(adjustl(clim_type%field_name(i)))) ) then
 
     found_field=.true.
 
@@ -3200,7 +3228,7 @@ logical :: result, found
 
 found = .false.
 do j = 1,size(climo_diag_name(:))
-  if (climo_diag_name(j) .eq. clim_type%field_name(i)) then
+  if (lowercase(trim(adjustl(climo_diag_name(j)))) .eq. lowercase(trim(adjustl(clim_type%field_name(i))))) then
       found = .true.
       exit
   endif
@@ -3632,7 +3660,7 @@ call get_anthro_sulfate(aerosol,model_time,p_half,names(i),model_data,clim_units
 
       col_data(iscomp:iecomp,jscomp:jecomp)=0.0
       do k=1,level
-        if (trim(units) .eq. 'kg/m^2') then
+        if (lowercase(trim(adjustl(units))) .eq. 'kg/m^2') then
            col_data(iscomp:iecomp,jscomp:jecomp)= col_data(iscomp:iecomp,jscomp:jecomp)+ &
               model_data(iscomp:iecomp,jscomp:jecomp,k)
         else

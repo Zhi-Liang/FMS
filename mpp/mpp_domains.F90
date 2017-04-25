@@ -130,12 +130,13 @@ module mpp_domains_mod
   use mpp_parameter_mod,      only : ZERO, NINETY, MINUS_NINETY, ONE_HUNDRED_EIGHTY, MAX_TILES
   use mpp_parameter_mod,      only : EVENT_SEND, EVENT_RECV, ROOT_GLOBAL
   use mpp_parameter_mod,      only : NONBLOCK_UPDATE_TAG, EDGEONLY, EDGEUPDATE
+  use mpp_parameter_mod,      only : NONSYMEDGE, NONSYMEDGEUPDATE
   use mpp_mod,                only : mpp_pe, mpp_root_pe, mpp_npes, mpp_error, FATAL, WARNING, NOTE
   use mpp_mod,                only : stdout, stderr, stdlog, mpp_send, mpp_recv, mpp_transmit, mpp_sync_self
   use mpp_mod,                only : mpp_clock_id, mpp_clock_begin, mpp_clock_end
   use mpp_mod,                only : mpp_max, mpp_min, mpp_sum, mpp_get_current_pelist, mpp_broadcast
   use mpp_mod,                only : mpp_sync, mpp_init, lowercase
-  use mpp_mod,                only : input_nml_file
+  use mpp_mod,                only : input_nml_file, mpp_alltoall
   use mpp_mod,                only : COMM_TAG_1, COMM_TAG_2, COMM_TAG_3, COMM_TAG_4
   use ISO_C_BINDING,          only : C_F_POINTER, C_PTR, c_null_ptr
 #ifdef __GFORTRAN__
@@ -164,7 +165,7 @@ module mpp_domains_mod
   public :: NORTH, NORTH_EAST, EAST, SOUTH_EAST
   public :: SOUTH, SOUTH_WEST, WEST, NORTH_WEST
   public :: ZERO, NINETY, MINUS_NINETY, ONE_HUNDRED_EIGHTY 
-  public :: EDGEUPDATE
+  public :: EDGEUPDATE, NONSYMEDGEUPDATE
 
   !--- public data imported from mpp_data_mod
   public :: NULL_DOMAIN1D, NULL_DOMAIN2D
@@ -203,14 +204,30 @@ module mpp_domains_mod
   public :: mpp_reset_group_update_field
   public :: mpp_update_nest_fine, mpp_update_nest_coarse
   public :: mpp_get_boundary
+  public :: mpp_pass_SG_to_UG, mpp_pass_UG_to_SG
   !--- public interface from mpp_domains_define.h
   public :: mpp_define_layout, mpp_define_domains, mpp_modify_domain, mpp_define_mosaic
   public :: mpp_define_mosaic_pelist, mpp_define_null_domain
   public :: mpp_define_io_domain, mpp_deallocate_domain
   public :: mpp_compute_extent, mpp_compute_block_extent
 
+  !--- public interface for unstruct domain
+  public :: mpp_define_unstruct_domain, domainUG, mpp_get_UG_io_domain
+  public :: mpp_get_UG_domain_npes, mpp_get_UG_compute_domain, mpp_get_UG_domain_tile_id
+  public :: mpp_get_UG_domain_pelist, mpp_get_ug_domain_grid_index
+  public :: mpp_get_UG_domain_ntiles, mpp_get_UG_global_domain
+  public :: mpp_get_ug_domain_tile_list, mpp_get_UG_compute_domains
+  public :: mpp_define_null_UG_domain, NULL_DOMAINUG, mpp_get_UG_domains_index
+  public :: mpp_get_UG_SG_domain, mpp_get_UG_domain_tile_pe_inf
+
   !--- public interface from mpp_define_domains.inc
   public :: mpp_define_nest_domains, mpp_get_C2F_index, mpp_get_F2C_index
+
+!----------
+  public :: mpp_domain_UG_is_tile_root_pe
+  public :: mpp_deallocate_domainUG
+  public :: mpp_get_io_domain_UG_layout
+
   integer, parameter :: NAME_LENGTH = 64
   integer, parameter :: MAXLIST = 24
   integer, parameter :: MAXOVERLAP = 100
@@ -224,6 +241,54 @@ module mpp_domains_mod
   integer, parameter :: MPP_INT    = 3
 
   !--- data types used mpp_domains_mod.
+  type unstruct_axis_spec
+     private
+     integer :: begin, end, size, max_size
+     integer :: begin_index, end_index
+  end type unstruct_axis_spec
+
+  type unstruct_domain_spec
+     private
+     type(unstruct_axis_spec) :: compute
+     integer :: pe
+     integer :: pos
+     integer :: tile_id
+  end type unstruct_domain_spec
+
+  type unstruct_overlap_type
+     private
+     integer :: count = 0
+     integer :: pe
+     integer, pointer :: i(:)=>NULL()
+     integer, pointer :: j(:)=>NULL()
+  end type unstruct_overlap_type
+
+  type unstruct_pass_type
+     private
+     integer :: nsend, nrecv
+     type(unstruct_overlap_type), pointer :: recv(:)=>NULL()
+     type(unstruct_overlap_type), pointer :: send(:)=>NULL()
+  end type unstruct_pass_type
+
+  type domainUG
+     private
+     type(unstruct_axis_spec) :: compute, global
+     type(unstruct_domain_spec), pointer :: list(:)=>NULL()
+     type(domainUG), pointer :: io_domain=>NULL()
+     type(unstruct_pass_type) :: SG2UG
+     type(unstruct_pass_type) :: UG2SG
+     integer, pointer :: grid_index(:) => NULL()    ! on current pe
+     type(domain2d), pointer :: SG_domain => NULL()
+     integer :: pe 
+     integer :: pos
+     integer :: ntiles
+     integer :: tile_id
+     integer :: tile_root_pe
+     integer :: tile_npes
+     integer :: npes_io_group
+     integer(INT_KIND) :: io_layout
+  end type domainUG
+
   type domain_axis_spec        !type used to specify index limits along an axis of a domain
      private
      integer :: begin, end, size, max_size      !start, end of domain axis, size, max size in set
@@ -455,6 +520,7 @@ module mpp_domains_mod
      private
      logical            :: initialized = .FALSE.
      logical            :: k_loop_inside = .TRUE.
+     logical            :: nonsym_edge = .FALSE.
      integer            :: nscalar = 0
      integer            :: nvector = 0
      integer            :: flags_s=0, flags_v=0
@@ -464,7 +530,7 @@ module mpp_domains_mod
      integer            :: isize_x=0, jsize_x=0, ksize_v=0
      integer            :: isize_y=0, jsize_y=0
      integer            :: position=0, gridtype=0
-     logical            :: recv_s(8), recv_v(8)
+     logical            :: recv_s(8), recv_x(8), recv_y(8)
      integer            :: nrecv=0, nsend=0
      integer            :: npack=0, nunpack=0
      integer            :: reset_index_s = 0
@@ -520,6 +586,7 @@ module mpp_domains_mod
   integer              :: mpp_domains_stack_hwm=0
   type(domain1D),save  :: NULL_DOMAIN1D
   type(domain2D),save  :: NULL_DOMAIN2D
+  type(domainUG),save  :: NULL_DOMAINUG
   integer                         :: num_nonblock_group_update = 0
   integer                         :: nonblock_group_buffer_pos = 0
   integer                         :: group_update_buffer_pos = 0
@@ -1422,9 +1489,20 @@ module mpp_domains_mod
      module procedure mpp_update_nest_coarse_4d
   end interface
 
-  interface mpp_broadcast_domain
-     module procedure mpp_broadcast_domain_1
-     module procedure mpp_broadcast_domain_2
+interface mpp_broadcast_domain
+  module procedure mpp_broadcast_domain_1
+  module procedure mpp_broadcast_domain_2
+  module procedure mpp_broadcast_domain_ug
+end interface
+
+  interface mpp_pass_SG_to_UG
+     module procedure mpp_pass_SG_to_UG_2d
+     module procedure mpp_pass_SG_to_UG_3d
+  end interface
+
+  interface mpp_pass_UG_to_SG
+     module procedure mpp_pass_UG_to_SG_2d
+     module procedure mpp_pass_UG_to_SG_3d
   end interface
 
 ! <INTERFACE NAME="mpp_get_boundary">
@@ -1705,11 +1783,13 @@ module mpp_domains_mod
   interface operator(.EQ.)
      module procedure mpp_domain1D_eq
      module procedure mpp_domain2D_eq
+     module procedure mpp_domainUG_eq
   end interface
 
   interface operator(.NE.)
      module procedure mpp_domain1D_ne
      module procedure mpp_domain2D_ne
+     module procedure mpp_domainUG_ne
   end interface
 
   ! <INTERFACE NAME="mpp_get_compute_domain">
@@ -1969,7 +2049,7 @@ contains
 #include <mpp_update_nest_domains.inc>
 #include <mpp_global_field.inc>
 #include <mpp_global_reduce.inc>
-
+#include <mpp_unstruct_domain.inc>
 
 end module mpp_domains_mod
 

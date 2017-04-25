@@ -28,7 +28,7 @@
             ! other half may have the wrong sign
             !off west edge, when update north or west direction
             j = domain%y(1)%global%end+shift + joff
-            if ( recv(7) .OR. recv(5) ) then
+            if ( recv_y(7) .OR. recv_y(5) ) then
                select case(gridtype)
                case(BGRID_NE)
                   if(domain%symmetry) then
@@ -51,12 +51,13 @@
                   end if
                case(CGRID_NE)
                   is = domain%x(1)%global%begin
-                  if( is.GT.domain%x(1)%data%begin )then
+                  isd = domain%x(1)%compute%begin - whalo_v
+                  if( is.GT.isd )then
                      if( 2*is-domain%x(1)%data%begin-1.GT.domain%x(1)%data%end ) &
                           call mpp_error( FATAL, 'MPP_DO_UPDATE_V: folded-north CGRID_NE west edge ubound error.' )
                      do l=1,l_size
                         do k = 1,ke
-                           do i = domain%x(1)%data%begin,is-1
+                           do i = isd,is-1
                               yHold(l,tMe)%data(i+ioff,j,k) = yHold(l,tMe)%data(2*is-i-1+ioff,j,k)
                            end do
                         end do
@@ -68,7 +69,7 @@
             !off east edge
             is = domain%x(1)%global%end
             if(domain%x(1)%cyclic .AND. is.LT.domain%x(1)%data%end )then
-               ie = domain%x(1)%data%end
+               ie = domain%x(1)%compute%end+ehalo_v
                is = is + 1
                select case(gridtype)
                case(BGRID_NE)
@@ -118,7 +119,7 @@
             ! other half may have the wrong sign
             !off west edge, when update north or west direction
             j = domain%y(1)%global%begin + joff
-            if ( recv(3) .OR. recv(5) ) then
+            if ( recv_x(3) .OR. recv_x(5) ) then
                select case(gridtype)
                case(BGRID_NE)
                   is = domain%x(1)%global%begin
@@ -204,7 +205,7 @@
             ! other half may have the wrong sign
             !off south edge, when update south or west direction
             i = domain%x(1)%global%begin+ioff
-            if ( recv(3) .OR. recv(5) ) then
+            if ( recv_x(3) .OR. recv_x(5) ) then
                select case(gridtype)
                case(BGRID_NE)
                   js = domain%y(1)%global%begin
@@ -290,7 +291,7 @@
             ! other half may have the wrong sign
             !off south edge, when update south or west direction
             i = domain%x(1)%global%end+shift+ioff
-            if ( recv(3) .OR. recv(1) ) then
+            if ( recv_x(3) .OR. recv_x(1) ) then
                select case(gridtype)
                case(BGRID_NE)
                   js = domain%y(1)%global%begin

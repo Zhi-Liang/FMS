@@ -169,7 +169,8 @@ subroutine create_group_updateV_core( group, domain, cptrx, cptry, fsizex, fsize
   integer          :: nvector, update_gridtype, position_x, position_y
   character(len=3) :: text
   logical          :: set_mismatch
-  logical          :: recv(8), send(8)
+  logical          :: recv_x(8), send_x(8)
+  logical          :: recv_y(8), send_y(8)
 
   if(group%initialized) then
      call mpp_error(FATAL, "create_group_updateV_core: group is already initialized")
@@ -233,8 +234,11 @@ subroutine create_group_updateV_core( group, domain, cptrx, cptry, fsizex, fsize
      group%isize_y  = fsizey(1)
      group%jsize_y  = fsizey(2)
      group%ksize_v  = fsizex(3)
-     call get_send_recv_value(update_flags, send, recv)
-     group%recv_v = recv
+
+     call get_vector_send_recv_value(update_flags, update_gridtype, domain%symmetry, group%nonsym_edge, &
+                                     send_x, send_y, recv_x, recv_y)
+     group%recv_x = recv_x
+     group%recv_y = recv_y
      select case(group%gridtype)
      case (AGRID)
         position_x = CENTER
@@ -457,7 +461,6 @@ subroutine start_group_update_r8(group, domain, sHold, xHold, yHold, buffer)
   real(DOUBLE_KIND),           intent(inout) :: buffer(mpp_domains_stack_size)  
 
   integer   :: nvector, nlist
-  logical   :: recv(8)
   integer   :: nsend, nrecv, update_flags
   integer   :: msgsize
   integer   :: from_pe, to_pe, buffer_pos, pos
@@ -484,13 +487,13 @@ subroutine complete_group_update_r8(group, domain, sHold, xHold, yHold, buffer)
   real(DOUBLE_KIND),           intent(inout) :: buffer(mpp_domains_stack_size)
 
   integer   :: nscalar, nvector, l_size, tMe
-  logical   :: recv(8)
+  logical   :: recv_x(8), recv_y(8)
   integer   :: nsend, nrecv, update_flags
   integer   :: buffer_pos, pos
   integer   :: is, ie, js, je, ke
   integer   :: n, l, m, i, j, k, buffer_start_pos
   integer   :: shift, gridtype, midpoint, ioff, joff
-  integer   :: nunpack, rotation
+  integer   :: nunpack, rotation, isd, whalo_v, ehalo_v
 
 #include "complete_group_update.inc"
 
@@ -503,7 +506,6 @@ subroutine start_group_update_r4(group, domain, sHold, xHold, yHold, buffer)
   real(FLOAT_KIND),           intent(inout) :: buffer(mpp_domains_stack_size)
 
   integer   :: nvector, nlist
-  logical   :: recv(8)
   integer   :: nsend, nrecv, update_flags
   integer   :: msgsize
   integer   :: from_pe, to_pe, buffer_pos, pos
@@ -530,13 +532,13 @@ subroutine complete_group_update_r4(group, domain, sHold, xHold, yHold, buffer)
   real(FLOAT_KIND),           intent(inout) :: buffer(mpp_domains_stack_size)
 
   integer   :: nscalar, nvector, l_size, tMe
-  logical   :: recv(8)
+  logical   :: recv_x(8), recv_y(8)
   integer   :: nsend, nrecv, update_flags
   integer   :: buffer_pos, pos
   integer   :: is, ie, js, je, ke
   integer   :: n, l, m, i, j, k, buffer_start_pos
   integer   :: shift, gridtype, midpoint, ioff, joff
-  integer   :: nunpack, rotation
+  integer   :: nunpack, rotation, isd, whalo_v, ehalo_v
 
 #include "complete_group_update.inc"
 

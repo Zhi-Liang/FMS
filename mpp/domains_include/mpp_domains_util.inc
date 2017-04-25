@@ -851,16 +851,23 @@ end subroutine mpp_get_domain_shift
     integer,                    intent(in) :: position
     type(overlapSpec),          pointer    :: search_update_overlap
     type(overlapSpec),          pointer    :: update_ref
+    type(overlapSpec), pointer :: check => NULL()
+    integer :: ishift, jshift, shift
 
+    shift = 0; if(domain%symmetry) shift = 1
     select case(position)
     case (CENTER)
        update_ref => domain%update_T
+       ishift = 0; jshift = 0
     case (CORNER)
        update_ref => domain%update_C
+       ishift = shift; jshift = shift
     case (NORTH)
        update_ref => domain%update_N
+       ishift = 0; jshift = shift
     case (EAST)
        update_ref => domain%update_E
+       ishift = shift; jshift = 0
     case default
        call mpp_error(FATAL,"mpp_domains_util.inc(search_update_overlap): position should be CENTER|CORNER|EAST|NORTH")
     end select
@@ -876,12 +883,19 @@ end subroutine mpp_get_domain_shift
        if(.NOT. ASSOCIATED(search_update_overlap%next)) then
           allocate(search_update_overlap%next)
           search_update_overlap => search_update_overlap%next
-          call set_overlaps(domain, update_ref, search_update_overlap, whalo, ehalo, shalo, nhalo )
+          if(domain%fold .NE. 0) then
+             call compute_overlaps(domain, position, search_update_overlap, check, &
+                                   ishift, jshift, whalo, ehalo, shalo, nhalo)
+             call reset_update_index(domain, search_update_overlap)
+             call set_domain_comm_inf(search_update_overlap)
+          else
+             call set_overlaps(domain, update_ref, search_update_overlap, whalo, ehalo, shalo, nhalo )
+          endif
           exit
        else
           search_update_overlap => search_update_overlap%next
        end if
- 
+  
     end do
 
     update_ref => NULL()
@@ -1565,8 +1579,9 @@ end subroutine mpp_get_domain_shift
      integer   :: nrecv_s, nrecv_x, nrecv_y
      integer   :: update_buffer_pos, tot_recv_size, tot_send_size
      integer   :: msgsize_s, msgsize_x, msgsize_y, msgsize
-     logical   :: recv_s(8), send_s(8), recv_v(8), send_v(8)
      integer   :: ntot, n, l, m, ksize_s, ksize_v
+     logical   :: recv_s(8), send_s(8)
+     logical   :: recv_x(8), send_x(8), recv_y(8), send_y(8)
      integer   :: i_s, i_x, i_y, rank_s, rank_x, rank_y, rank
      integer   :: ind_s(3*MAXOVERLAP)
      integer   :: ind_x(3*MAXOVERLAP)
@@ -1623,8 +1638,10 @@ end subroutine mpp_get_domain_shift
         send_s = recv_s
      endif
      if(nvector > 0) then
-        recv_v = group%recv_v
-        send_v = recv_v
+        recv_x = group%recv_x
+        send_x = recv_x
+        recv_y = group%recv_y
+        send_y = recv_y
      end if
      nlist   = size(domain%list(:))
      group%initialized = .true.
@@ -1726,9 +1743,9 @@ end subroutine mpp_get_domain_shift
         m = ind_s(l)
         if(m>0) msgsize_s = get_mesgsize(update_s%recv(m), recv_s)*ksize_s*nscalar
         m = ind_x(l)
-        if(m>0) msgsize_x = get_mesgsize(update_x%recv(m), recv_v)*ksize_v*nvector
+        if(m>0) msgsize_x = get_mesgsize(update_x%recv(m), recv_x)*ksize_v*nvector
         m = ind_y(l)
-        if(m>0) msgsize_y = get_mesgsize(update_y%recv(m), recv_v)*ksize_v*nvector
+        if(m>0) msgsize_y = get_mesgsize(update_y%recv(m), recv_y)*ksize_v*nvector
         msgsize = msgsize_s + msgsize_x + msgsize_y
         if( msgsize.GT.0 )then
            tot_recv_size = tot_recv_size + msgsize
@@ -1775,7 +1792,7 @@ end subroutine mpp_get_domain_shift
            overptr => update_x%recv(m)
            do n = 1, overptr%count
               dir = overptr%dir(n)
-              if(recv_v(dir)) then
+              if(recv_x(dir)) then
                  nunpack = nunpack + 1
                  if(nunpack > MAXOVERLAP) call mpp_error(FATAL,  &
                    "set_group_update: nunpack is greater than MAXOVERLAP, increase MAXOVERLAP 2")
@@ -1797,7 +1814,7 @@ end subroutine mpp_get_domain_shift
            overptr => update_y%recv(m)
            do n = 1, overptr%count
               dir = overptr%dir(n)
-              if(recv_v(dir)) then
+              if(recv_y(dir)) then
                  nunpack = nunpack + 1
                  if(nunpack > MAXOVERLAP) call mpp_error(FATAL,  &
                    "set_group_update: nunpack is greater than MAXOVERLAP, increase MAXOVERLAP 3")
@@ -1880,9 +1897,9 @@ end subroutine mpp_get_domain_shift
         m = ind_s(l)
         if(m>0) msgsize_s = get_mesgsize(update_s%send(m), send_s)*ksize_s*nscalar
         m = ind_x(l)
-        if(m>0) msgsize_x = get_mesgsize(update_x%send(m), send_v)*ksize_v*nvector
+        if(m>0) msgsize_x = get_mesgsize(update_x%send(m), send_x)*ksize_v*nvector
         m = ind_y(l)
-        if(m>0) msgsize_y = get_mesgsize(update_y%send(m), send_v)*ksize_v*nvector
+        if(m>0) msgsize_y = get_mesgsize(update_y%send(m), send_y)*ksize_v*nvector
         msgsize = msgsize_s + msgsize_x + msgsize_y
         if( msgsize.GT.0 )then
            tot_send_size = tot_send_size + msgsize
@@ -1930,7 +1947,13 @@ end subroutine mpp_get_domain_shift
            overptr => update_x%send(m)
            do n = 1, overptr%count
               dir = overptr%dir(n)
-              if(send_v(dir)) then
+              !--- nonsym_edge update is not for rotation of 90 or -90 degree ( cubic sphere grid )
+              if( group%nonsym_edge .and. (overptr%rotation(n)==NINETY .or. &
+                                          overptr%rotation(n)==MINUS_NINETY) ) then
+                 call mpp_error(FATAL, 'set_group_update: flags=NONSYMEDGEUPDATE is not compatible '// &
+                                       'with 90 or -90 degree rotation (normally cubic sphere grid' )
+              endif
+              if(send_x(dir)) then
                  npack = npack + 1
                  if(npack > MAXOVERLAP) call mpp_error(FATAL,  &
                    "set_group_update: npack is greater than MAXOVERLAP, increase MAXOVERLAP 2")
@@ -1952,7 +1975,12 @@ end subroutine mpp_get_domain_shift
            overptr => update_y%send(m)
            do n = 1, overptr%count
               dir = overptr%dir(n)
-              if(send_v(dir)) then
+              if( group%nonsym_edge .and. (overptr%rotation(n)==NINETY .or. &
+                                          overptr%rotation(n)==MINUS_NINETY) ) then
+                 call mpp_error(FATAL, 'set_group_update: flags=NONSYMEDGEUPDATE is not compatible '// &
+                                       'with 90 or -90 degree rotation (normally cubic sphere grid' )
+              endif
+              if(send_y(dir)) then
                  npack = npack + 1
                  if(npack > MAXOVERLAP) call mpp_error(FATAL,  &
                    "set_group_update: npack is greater than MAXOVERLAP, increase MAXOVERLAP 3")
@@ -2141,13 +2169,17 @@ end subroutine set_group_update
      integer, intent(in)  :: update_flags
      logical, intent(out) :: send(:), recv(:)
      logical              :: update_edge_only
-     
+
      update_edge_only = BTEST(update_flags, EDGEONLY)
      recv(1) = BTEST(update_flags,EAST)
      recv(3) = BTEST(update_flags,SOUTH)
      recv(5) = BTEST(update_flags,WEST)
      recv(7) = BTEST(update_flags,NORTH)
      if( update_edge_only ) then
+        recv(2) = .false.
+        recv(4) = .false.
+        recv(6) = .false.
+        recv(8) = .false.
         if( .NOT. (recv(1) .OR. recv(3) .OR. recv(5) .OR. recv(7)) ) then
            recv(1) = .true.
            recv(3) = .true.
@@ -2164,6 +2196,69 @@ end subroutine set_group_update
 
   end subroutine get_send_recv_value
 
+!####################################################################
+  subroutine get_vector_send_recv_value(update_flags, update_gridtype, symmetry, nonsym_edge, send_x, send_y, recv_x, recv_y)
+     integer, intent(in)  :: update_flags, update_gridtype
+     logical, intent(in)  :: symmetry
+     logical, intent(out) :: nonsym_edge
+     logical, intent(out) :: send_x(:), send_y(:), recv_x(:), recv_y(:)
+     logical              :: update_edge_only, recv(8)
+
+     update_edge_only = BTEST(update_flags, EDGEONLY)
+     recv(1) = BTEST(update_flags,EAST)
+     recv(3) = BTEST(update_flags,SOUTH)
+     recv(5) = BTEST(update_flags,WEST)
+     recv(7) = BTEST(update_flags,NORTH)
+     if( update_edge_only ) then
+        recv(2) = .false.
+        recv(4) = .false.
+        recv(6) = .false.
+        recv(8) = .false.
+        if( .NOT. (recv(1) .OR. recv(3) .OR. recv(5) .OR. recv(7)) ) then
+           recv(1) = .true.
+           recv(3) = .true.
+           recv(5) = .true.
+           recv(7) = .true.
+        endif
+     else
+        recv(2) = recv(1) .AND. recv(3)
+        recv(4) = recv(3) .AND. recv(5)
+        recv(6) = recv(5) .AND. recv(7)
+        recv(8) = recv(7) .AND. recv(1)
+     endif
+
+     recv_x = recv
+     recv_y = recv
+
+     nonsym_edge = .FALSE.
+     if( .not. symmetry .and. (update_gridtype==CGRID_NE .OR. update_gridtype==DGRID_NE)) then
+        nonsym_edge = BTEST(update_flags, NONSYMEDGE)
+     endif
+
+     if( nonsym_edge ) then
+        recv_x(2:8:2) = .false.
+        recv_y(2:8:2) = .false.
+        if(update_gridtype==CGRID_NE) then
+           recv_x(3) = .false.
+           recv_x(7) = .false.
+           recv_y(1) = .false.
+           recv_y(5) = .false.
+        else if(update_gridtype==DGRID_NE) then
+           recv_x(1) = .false.
+           recv_x(5) = .false.
+           recv_y(3) = .false.
+           recv_y(7) = .false.
+        endif
+     endif
+
+
+     send_x    = recv_x
+     send_y    = recv_y
+
+  end subroutine get_vector_send_recv_value
+
+
+!#####################################################################
   subroutine get_domain_halos(domain, update_whalo, update_ehalo, update_shalo, update_nhalo, whalo, ehalo, shalo, nhalo)
      type(domain2D),    intent(in) :: domain   
      integer,          intent(out) :: update_whalo, update_ehalo, update_shalo, update_nhalo
@@ -2199,6 +2294,15 @@ end subroutine set_group_update
      end if
 
   end subroutine get_domain_halos
+
+  subroutine point_2D_to_1D(n1,data, ptr)
+     integer,  intent(in) :: n1
+     class(*), intent(in), target :: data(n1)
+     class(*), pointer    :: ptr(:,:)
+
+     ptr(1:n1,1:1) => data
+
+  end subroutine point_2D_to_1D
 
   subroutine point_3D_to_2D(n1,n2,data, ptr)
      integer,  intent(in) :: n1, n2
