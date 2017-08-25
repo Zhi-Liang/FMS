@@ -120,6 +120,7 @@ use mpp_domains_mod,   only: mpp_get_UG_domain_pelist
 use mpp_io_mod,        only: mpp_io_unstructured_write
 use mpp_io_mod,        only: mpp_io_unstructured_read
 use mpp_io_mod,        only: mpp_file_is_opened
+use mpp_io_mod,        only: mpp_get_file_unit
 !----------
 
 implicit none
@@ -7196,73 +7197,25 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
  integer :: mpp_format, mpp_action, mpp_access, mpp_thread
 !-----------------------------------------------------------------------
 
-   if ( .not. module_is_initialized ) call fms_io_init ( )
-
-   if (present(action)) then    ! must be present
-      action_local = action
-   else
-      call mpp_error (FATAL, 'open_file in fms_mod : argument action not present')
-   endif
-
-   unit = 0  ! Initialize return value. Note that mpp_open will call mpi_abort on error
-   if(PRESENT(dist))then
-     if(lowercase(trim(action_local)) /= 'read') &
-       call mpp_error(FATAL,'open_file in fms_mod: distributed'//lowercase(trim(action_local))// &
-                              ' not currently supported')
-     ! If distributed, return if not I/O root
-     if(dist) then
-       if(.not. mpp_is_dist_ioroot(dr_set_size)) return
-     endif
-   endif
-
-!   ---- return stdlog if this is the logfile ----
-
-    if (trim(file) == 'logfile.out') then
-       unit = stdlog()
-       return
+    if (.not. module_is_initialized) then
+        call fms_io_init()
     endif
 
-!   ---- is this file open and connected to a unit ?? ----
+    !Return stdlog if this is the logfile.  Probably should just be
+    !a mpp routine to open the logfile?
+    if (trim(file) .eq. "logfile.out") then
+        unit = stdlog()
+        return
+    endif
 
-   inquire (file=trim(file), opened=open, number=unit)
-
-!  cannot open a file that is already open
-!  except for the log file
-
-   if ( open .and. unit >= 0 ) then
-      call mpp_error (FATAL, 'open_file in fms_mod : '// &
-                       'file '//trim(file)//' is already open')
-   endif
-
-!  --- defaults ---
-
-   form_local   = 'formatted';  if (present(form))      form_local   = form
-   access_local = 'sequential'; if (present(access))    access_local = access
-   thread_local = 'single';     if (present(threading)) thread_local = threading
-   no_headers   = .true.
-   do_ieee32    = .false.
-
-!   --- file format ---
-
-    select case (lowercase(trim(form_local)))
-       case ('formatted')
-           mpp_format = MPP_ASCII
-       case ('ascii')
-           mpp_format = MPP_ASCII
-       case ('unformatted')
-           mpp_format = MPP_NATIVE
-       case ('native')
-           mpp_format = MPP_NATIVE
-       case ('ieee32')
-           do_ieee32 = .true.
-       case ('netcdf')
-           mpp_format = MPP_NETCDF
-       case default
-           call mpp_error (FATAL, 'open_file in fms_mod : '// &
-                            'invalid option for argument form')
-    end select
-
-!   --- action (read,write,append) ---
+    !Why is it optional then?  Because form is optional and comes before
+    !it in the call?
+    if (present(action)) then    ! must be present
+        action_local = action
+    else
+        call mpp_error(FATAL, &
+                       "open_file: argument action not present.")
+    endif
 
     select case (lowercase(trim(action_local)))
        case ('read')
@@ -7272,23 +7225,43 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
        case ('append')
            mpp_action = MPP_APPEND
        case default
-           call mpp_error (FATAL, 'open_file in fms_mod : '// &
-                            'invalid option for argument action')
+           call mpp_error(FATAL, &
+                          "open_file: " &
+                              //"invalid option for argument action.")
     end select
 
-!   --- file access (sequential,direct) ---
+    unit = 0
+    if (present(dist)) then
+        if (lowercase(trim(action_local)) .ne. "read") then
+            call mpp_error(FATAL, &
+                           "open_file: distributed" &
+                               //lowercase(trim(action_local)) &
+                               //" not currently supported.")
+        endif
+    endif
 
-    select case (lowercase(trim(access_local)))
-       case ('sequential')
-           mpp_access = MPP_SEQUENTIAL
-       case ('direct')
-           mpp_access = MPP_DIRECT
+    if (present(form)) then
+        form_local = form
+    else
+        form_local = "ascii"
+    endif
+
+    select case (lowercase(trim(form_local)))
+       case ('ascii')
+           mpp_format = MPP_ASCII
+       case ('netcdf')
+           mpp_format = MPP_NETCDF
        case default
-           call mpp_error (FATAL, 'open_file in fms_mod : '// &
-                            'invalid option for argument access')
+           call mpp_error(FATAL, &
+                          "open_file: " &
+                              //"invalid option for argument form.")
     end select
 
-!   --- threading (single,multi) ---
+    if (present(threading)) then
+        thread_local = threading
+    else
+        thread_local = "single"
+    endif
 
     select case (lowercase(trim(thread_local)))
        case ('single')
@@ -7296,25 +7269,17 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
        case ('multi')
            mpp_thread = MPP_MULTI
        case default
-           call mpp_error (FATAL, 'open_file in fms_mod : '// &
-                            'invalid option for argument thread')
-           if (trim(file) /= '_read_error.nml') no_headers = .false.
+           call mpp_error(FATAL, &
+                          "open_file: " &
+                              //"invalid option for argument thread.")
     end select
 
-!   ---------------- open file -----------------------
-
-    if ( .not.do_ieee32 ) then
-       call mpp_open ( unit, file, form=mpp_format, action=mpp_action, &
-                       access=mpp_access, threading=mpp_thread,        &
-                       fileset=MPP_SINGLE,nohdrs=no_headers, recl=recl )
-    else
-     ! special open for ieee32 file
-     ! fms_mod has iospec value
-     ! pass local action flag to open changing append to write
-       action_ieee32 = action_local
-       if (lowercase(trim(action_ieee32)) == 'append') action_ieee32 = 'write'
-       unit = open_ieee32_file ( file, action_ieee32 )
-    endif
+    call mpp_open(unit, &
+                  file, &
+                  form=mpp_format, &
+                  action=mpp_action, &
+                  threading=mpp_thread, &
+                  fileset=MPP_SINGLE)
 
 !-----------------------------------------------------------------------
 
@@ -7524,8 +7489,26 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
     integer                         :: unit, ndim, nvar, natt, ntime, i
     type(atttype), allocatable      :: global_atts(:)
 
+    !Extra variables.
+    character(len=len(file)+32) :: actual_file
+    logical :: read_dist
+    logical :: io_domain_exist
+    integer :: index_file
+
     get_global_att_value_text = .false.
-    call mpp_open(unit,trim(file),MPP_RDONLY,MPP_NETCDF,threading=MPP_MULTI,fileset=MPP_SINGLE)
+
+    if (.not. mpp_file_is_opened(trim(file),MPP_NETCDF)) then
+        call mpp_open(unit, &
+                      trim(file), &
+                      action=MPP_RDONLY, &
+                      form=MPP_NETCDF, &
+                      threading=MPP_MULTI, &
+                      fileset=MPP_SINGLE)
+    else
+        unit = mpp_get_file_unit(trim(file), &
+                                 MPP_NETCDF)
+    endif
+
     call mpp_get_info(unit, ndim, nvar, natt, ntime)
     allocate(global_atts(natt))
     call mpp_get_atts(unit,global_atts)
@@ -7552,8 +7535,31 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
     integer                         :: unit, ndim, nvar, natt, ntime, i
     type(atttype), allocatable      :: global_atts(:)
 
+    !Extra variables.
+    character(len=len(file)+32) :: actual_file
+    logical :: read_dist
+    logical :: io_domain_exist
+    integer :: index_file
+
     get_global_att_value_real = .false.
-    call mpp_open(unit,trim(file),MPP_RDONLY,MPP_NETCDF,threading=MPP_MULTI,fileset=MPP_SINGLE)
+
+    !Make sure that the file exists.
+    if (.not. get_file_name(trim(file), &
+                            actual_file, &
+                            read_dist, &
+                            io_domain_exist)) then
+        call mpp_error(FATAL, &
+                       "get_global_att_value_text: file "//trim(file)// &
+                           " or variants do not exist.")
+    endif
+
+    !Get the file unit.  This routine will open the file if needed.
+    call get_file_unit(trim(actual_file), &
+                       unit, &
+                       index_file, &
+                       read_dist, &
+                       io_domain_exist)
+
     call mpp_get_info(unit, ndim, nvar, natt, ntime)
     allocate(global_atts(natt))
     call mpp_get_atts(unit,global_atts)

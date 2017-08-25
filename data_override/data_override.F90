@@ -58,8 +58,8 @@ module data_override_mod
 #include <fms_platform.h>
 use platform_mod, only: r8_kind
 use constants_mod, only: PI
-use mpp_io_mod, only: axistype,mpp_close,mpp_open,mpp_get_axis_data,MPP_RDONLY,MPP_ASCII
-use mpp_mod, only : mpp_error,FATAL,WARNING,mpp_pe,stdout,stdlog,mpp_root_pe, NOTE, mpp_min, mpp_max, mpp_chksum
+use mpp_io_mod, only: axistype,mpp_get_axis_data
+use mpp_mod, only : mpp_error,FATAL,WARNING,mpp_pe,stdout,stdlog,mpp_root_pe, NOTE, mpp_min, mpp_max, mpp_chksum, get_unit
 use mpp_mod, only : input_nml_file
 use horiz_interp_mod, only : horiz_interp_init, horiz_interp_new, horiz_interp_type, &
                              assignment(=), horiz_interp_del
@@ -251,8 +251,9 @@ subroutine data_override_init(Atm_domain_in, Ocean_domain_in, Ice_domain_in, Lan
        data_table(i) = default_table
     enddo
 
-!  Read coupler_table 
-    call mpp_open(iunit, 'data_table', action=MPP_RDONLY)
+!  Read coupler_table
+    iunit = get_unit()
+    open(unit=iunit,file="data_table",action="read")
     ntable = 0
     ntable_lima = 0
     ntable_new = 0
@@ -362,7 +363,7 @@ subroutine data_override_init(Atm_domain_in, Ocean_domain_in, Ice_domain_in, Lan
     table_size = ntable
     if(ntable_new*ntable_lima /= 0) call mpp_error(FATAL, &
        'data_override_mod: New and old formats together in same data_table not supported')
-    call mpp_close(iunit)
+    close(iunit)
 !  Initialize override array
     default_array%gridname = 'NONE'
     default_array%fieldname = 'NONE'

@@ -168,12 +168,8 @@ use    mpp_mod, only : mpp_error,   &
                        mpp_pe,      &
                        mpp_root_pe, &
                        stdlog,      &
-                       stdout
-use mpp_io_mod, only : mpp_io_init, &
-                       mpp_open,    &
-                       mpp_close,   &
-                       MPP_ASCII,   &
-                       MPP_RDONLY
+                       stdout, &
+                       get_unit
 use    fms_mod, only : lowercase,   &
                        file_exist,  &
                        write_version_number
@@ -626,8 +622,6 @@ call mpp_error(NOTE,trim(note_header)//"Preserving the unit's case is experiment
 num_fields = 0
 call initialize
 
-call mpp_io_init()
-
 if (.not.PRESENT(table_name)) then
    tbl_name = 'field_table'
 else
@@ -648,8 +642,9 @@ if(present(nfields)) nfields = 0
 return
 endif
 
+iunit = get_unit()
+open(unit=iunit,file=trim(tbl_name),action="read")
 
-call mpp_open(iunit,file=trim(tbl_name), form=MPP_ASCII, action=MPP_RDONLY)
 !write_version_number should precede all writes to stdlog from field_manager
 call write_version_number("FIELD_MANAGER_MOD", version)
 log_unit = stdlog()

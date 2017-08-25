@@ -31,7 +31,9 @@ use mpp_io_mod,        only : mpp_open,          &
                               MPP_NETCDF,        &
                               MPP_MULTI,         &
                               MPP_APPEND,        &
-                              MPP_SINGLE
+                              MPP_SINGLE, &
+                              mpp_file_is_opened, &
+                              mpp_get_file_unit
 use mpp_domains_mod,   only : mpp_domains_init,      &
                               mpp_update_domains,    &
                               mpp_define_domains,    &
@@ -363,12 +365,23 @@ num_fields = 0
 !--------------------------------------------------------------------
 src_file = 'INPUT/'//trim(file_name)
 
-if(file_exist(trim(src_file))) then
-   call mpp_open( unit, trim(src_file), action=MPP_RDONLY, &
-                  form=MPP_NETCDF, threading=MPP_MULTI, fileset=MPP_SINGLE )
+if (.not. mpp_file_is_opened(trim(src_file),MPP_NETCDF)) then
+    if (file_exist(trim(src_file))) then
+        call mpp_open(unit, &
+                      trim(src_file), &
+                      action=MPP_RDONLY, &
+                      form=MPP_NETCDF, &
+                      threading=MPP_MULTI, &
+                      fileset=MPP_SINGLE)
+    else
+        !Climatology file doesn't exist, so exit
+        call mpp_error(FATAL, &
+                       'Interpolator_init : Data file ' &
+                           //trim(src_file)//' does not exist')
+    endif
 else
-!Climatology file doesn't exist, so exit
-   call mpp_error(FATAL,'Interpolator_init : Data file '//trim(src_file)//' does not exist')
+    unit = mpp_get_file_unit(trim(src_file), &
+                             MPP_NETCDF)
 endif
 
 !Find the number of variables (nvar) in this file
