@@ -138,6 +138,7 @@ subroutine mpp_read_2ddecomp_r2d_(context, &
     integer(kind=c_int) :: ysg
     integer(kind=c_int) :: yeg
     integer(kind=c_size_t),dimension(2) :: data_sizes
+    type(domain2d),pointer :: io_domain
 
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
@@ -146,12 +147,9 @@ subroutine mpp_read_2ddecomp_r2d_(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
-
-    if (associated(context%files(file_index)%domain)) then
-        call domain2d_check(context, &
-                            file_index, &
-                            domain)
-    endif
+    call domain2d_check(context, &
+                        file_index, &
+                        domain)
 
     !Make sure that an unlimited dimension level is passed in if the
     !variable depends on an unlimited dimension.
@@ -343,15 +341,17 @@ subroutine mpp_read_2ddecomp_r2d_(context, &
         edge_lengths(1) = xe - xs + 1
         edge_lengths(2) = ye - ys + 1
 
-        if (associated(context%files(file_index)%io_domain)) then
-            call mpp_get_compute_domain(context%files(file_index)%io_domain, &
+!       io_domain => mpp_get_io_domain(domain)
+        io_domain => context%files(file_index)%io_domain
+        if (associated(io_domain)) then
+            call mpp_get_compute_domain(io_domain, &
                                         xs, &
                                         xe, &
                                         ys, &
                                         ye, &
                                         tile_count=tile_count, &
                                         position=dposition)
-            call mpp_get_global_domain(context%files(file_index)%io_domain, &
+            call mpp_get_global_domain(io_domain, &
                                        xsg, &
                                        xeg, &
                                        ysg, &
@@ -468,6 +468,7 @@ subroutine mpp_read_2ddecomp_r3d_(context, &
     integer(kind=c_int) :: ysg
     integer(kind=c_int) :: yeg
     integer(kind=c_size_t),dimension(3) :: data_sizes
+    type(domain2d),pointer :: io_domain
 
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
@@ -476,12 +477,9 @@ subroutine mpp_read_2ddecomp_r3d_(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
-
-    if (associated(context%files(file_index)%domain)) then
-        call domain2d_check(context, &
-                            file_index, &
-                            domain)
-    endif
+    call domain2d_check(context, &
+                        file_index, &
+                        domain)
 
     !Make sure that an unlimited dimension level is passed in if the
     !variable depends on an unlimited dimension.
@@ -675,15 +673,17 @@ subroutine mpp_read_2ddecomp_r3d_(context, &
         edge_lengths(1) = xe - xs + 1
         edge_lengths(2) = ye - ys + 1
 
-        if (associated(context%files(file_index)%io_domain)) then
-            call mpp_get_compute_domain(context%files(file_index)%io_domain, &
+!       io_domain => mpp_get_io_domain(domain)
+        io_domain => context%files(file_index)%io_domain
+        if (associated(io_domain)) then
+            call mpp_get_compute_domain(io_domain, &
                                         xs, &
                                         xe, &
                                         ys, &
                                         ye, &
                                         tile_count=tile_count, &
                                         position=dposition)
-            call mpp_get_global_domain(context%files(file_index)%io_domain, &
+            call mpp_get_global_domain(io_domain, &
                                        xsg, &
                                        xeg, &
                                        ysg, &
@@ -801,6 +801,7 @@ subroutine mpp_read_2ddecomp_r4d_(context, &
     integer(kind=c_int) :: ysg
     integer(kind=c_int) :: yeg
     integer(kind=c_size_t),dimension(4) :: data_sizes
+    type(domain2d),pointer :: io_domain
 
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
@@ -809,12 +810,9 @@ subroutine mpp_read_2ddecomp_r4d_(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
-
-    if (associated(context%files(file_index)%domain)) then
-        call domain2d_check(context, &
-                            file_index, &
-                            domain)
-    endif
+    call domain2d_check(context, &
+                        file_index, &
+                        domain)
 
     !Make sure that an unlimited dimension level is passed in if the
     !variable depends on an unlimited dimension.
@@ -1010,15 +1008,17 @@ subroutine mpp_read_2ddecomp_r4d_(context, &
         edge_lengths(1) = xe - xs + 1
         edge_lengths(2) = ye - ys + 1
 
-        if (associated(context%files(file_index)%io_domain)) then
-            call mpp_get_compute_domain(context%files(file_index)%io_domain, &
+!       io_domain => mpp_get_io_domain(domain)
+        io_domain => context%files(file_index)%io_domain
+        if (associated(io_domain)) then
+            call mpp_get_compute_domain(io_domain, &
                                         xs, &
                                         xe, &
                                         ys, &
                                         ye, &
                                         tile_count=tile_count, &
                                         position=dposition)
-            call mpp_get_global_domain(context%files(file_index)%io_domain, &
+            call mpp_get_global_domain(io_domain, &
                                        xsg, &
                                        xeg, &
                                        ysg, &

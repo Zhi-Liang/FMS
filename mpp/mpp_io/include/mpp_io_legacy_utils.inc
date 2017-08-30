@@ -260,6 +260,7 @@ subroutine mpp_get_axis_data(axis, &
     !Inputs/outputs
     type(axistype),intent(in) :: axis
     real(kind=c_double),dimension(:),intent(out) :: data
+    integer(kind=c_int) :: i
 
     call openmp_thread_trap()
     if (size(data) .lt. axis%len) then
@@ -268,13 +269,22 @@ subroutine mpp_get_axis_data(axis, &
                            //" for axis "//trim(axis%name))
     endif
 
-    if (.not. allocated(axis%data)) then
-        call mpp_error(NOTE, &
-                       "mpp_get_axis_data: use mpp_get_times for record" &
-                           //" dims.")
-        data = 0.0
+    if (allocated(axis%data) .and. allocated(axis%idata)) then
+        call mpp_error(FATAL, &
+                       "mpp_get_axis_data: the inputted axis cannot contain" &
+                           //" both real and integer data.")
+    endif
+
+    if (allocated(axis%data)) then
+        data(1:axis%len) = axis%data(1:axis%len)
+    elseif (allocated(axis%idata)) then
+        do i = 1,axis%len
+            data(i) = real(axis%idata(i),kind=c_double)
+        enddo
     else
-        data(1:axis%len) = axis%data
+        call mpp_error(FATAL, &
+                       "mpp_get_axis_data: the inputted axis does not contain" &
+                           //" any real or integer data.")
     endif
 
 end subroutine mpp_get_axis_data

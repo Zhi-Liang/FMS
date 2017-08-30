@@ -52,30 +52,42 @@ subroutine fms_io_unstructured_get_file_unit(filename, &
                        //" the fms_io_nml namelist.")
     endif
 
-   !Store the filename and initialize an array for the file fields.
+    if (file_exist(trim(filename))) then
+        if (mpp_file_is_opened(trim(filename),form)) then
+            funit = mpp_get_file_unit(trim(filename),form)
+            call mpp_close(funit)
+        endif
+
+        !Re-open the file.
+        if (read_dist) then
+            call mpp_open(funit, &
+                          trim(filename), &
+                          form=form, &
+                          action=MPP_RDONLY, &
+                          threading=MPP_MULTI, &
+                          fileset=MPP_MULTI, &
+                          domain_ug=domain)
+        else
+            call mpp_open(funit, &
+                          trim(filename), &
+                          form=form, &
+                          action=MPP_RDONLY, &
+                          threading=MPP_MULTI, &
+                          fileset=MPP_SINGLE)
+        endif
+
+    else
+        call mpp_error(FATAL, &
+                       "fms_io_unstructured_get_file_unit: Data file " &
+                           //trim(filename)//" does not exist.")
+    endif
+
+    !Store the filename and initialize an array for the file fields.
     num_files_r = num_files_r + 1
     files_read(num_files_r)%name = trim(filename)
     allocate(files_read(num_files_r)%var(max_fields))
     files_read(num_files_r)%nvar = 0
     index_file = num_files_r
-
-   !Open the file.
-    if (read_dist) then
-        call mpp_open(funit, &
-                      trim(filename), &
-                      form=form, &
-                      action=MPP_RDONLY, &
-                      threading=MPP_MULTI, &
-                      fileset=MPP_MULTI, &
-                      domain_ug=domain)
-    else
-        call mpp_open(funit, &
-                      trim(filename), &
-                      form=form, &
-                      action=MPP_RDONLY, &
-                      threading=MPP_MULTI, &
-                      fileset=MPP_SINGLE)
-    endif
 
    !Store the file unit returned by mpp_open.
     files_read(index_file)%unit = funit

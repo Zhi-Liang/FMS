@@ -65,7 +65,8 @@ subroutine mpp_get_valid(f, &
     type(fieldtype),intent(in) :: f
     type(validtype),intent(out) :: v
 
-    call mpp_error(FATAL, &
+!   call mpp_error(FATAL, &
+    call mpp_error(WARNING, &
                    "mpp_get_valid: this routine is no longer supported.")
 
 end subroutine mpp_get_valid

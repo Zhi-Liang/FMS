@@ -162,7 +162,7 @@ subroutine mpp_write_compressed_array(context, &
     !passed in.  This is done so that we can remove the need to pass in a
     !domain in the future.
     io_domain_ptr => null()
-    io_domain_ptr => context%files(file_index)%io_domain
+    io_domain_ptr => mpp_get_io_domain(domain)
 
     !Set the fill value.
     fill = 0
@@ -237,7 +237,7 @@ subroutine mpp_write_compressed_array(context, &
     endif
 
     !Perform the gather of the data onto the root rank.
-    var_data_size = int(sum(data_sizes),kind=c_int)
+    var_data_size = int(data_sizes(1),kind=c_int)*num_vals
     allocate(sbuf(var_data_size))
     do i = 1,var_data_size
         sbuf(i) = var_data(i)

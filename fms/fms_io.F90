@@ -102,7 +102,7 @@ use mpp_domains_mod, only: mpp_get_domain_shift, mpp_get_global_domain, mpp_glob
 use mpp_domains_mod, only: mpp_get_ntile_count, mpp_get_current_ntile, mpp_get_tile_id
 use mpp_domains_mod, only: mpp_get_pelist, mpp_get_io_domain, mpp_get_domain_npes
 use mpp_domains_mod, only: domainUG, mpp_pass_SG_to_UG, mpp_get_UG_domain_ntiles, mpp_get_UG_domain_tile_id
-use mpp_mod,         only: mpp_error, FATAL, NOTE, WARNING, mpp_pe, mpp_root_pe, mpp_npes, stdlog, stdout
+use mpp_mod,         only: mpp_error, FATAL, NOTE, WARNING, mpp_pe, mpp_root_pe, mpp_npes, stdlog, stdout, get_unit
 use mpp_mod,         only: mpp_broadcast, ALL_PES, mpp_chksum, mpp_get_current_pelist, mpp_npes, lowercase
 use mpp_mod,         only: input_nml_file, mpp_get_current_pelist_name, uppercase
 use mpp_mod,         only: mpp_gather, mpp_scatter, mpp_send, mpp_recv, mpp_sync_self, COMM_TAG_1, EVENT_RECV
@@ -3735,45 +3735,60 @@ subroutine restore_state_all(fileObj, directory)
      endif
      io_domain => NULL()
   endif
-  if(fexist) then
-     nfile = 1
-     !--- domain_present is true
-     call mpp_open(unit(nfile), trim(restartpath), form=form,action=MPP_RDONLY, &
-           threading=MPP_MULTI, domain=array_domain(domain_idx) )
+
+  if (fexist) then
+      nfile = 1
+      if (mpp_file_is_opened(trim(restartpath),form)) then
+          unit(nfile) = mpp_get_file_unit(trim(restartpath), &
+                                          form)
+      else
+          call mpp_open(unit(nfile), &
+                        trim(restartpath), &
+                        form=form, &
+                        action=MPP_RDONLY, &
+                        threading=MPP_MULTI, &
+                        domain=array_domain(domain_idx))
+      endif
   else
-     do while(.true.)
-        if (num_restart < 10) then
-           write(suffix,'("_",I1)') num_restart
-        else
-           write(suffix,'("_",I2)') num_restart
-        endif
-        if (num_restart > 0) then
-           siz = len_trim(restartpath)
-           if(restartpath(siz-2:siz) == ".nc") then
-              filepath = restartpath(1:siz-3)//trim(suffix)
-           else
-              filepath = trim(restartpath) // trim(suffix)
-           end if
-        else
-           filepath = trim(restartpath)
-        end if
-        inquire (file=trim(filepath), exist=fexist)
-        if(.not. fexist) inquire(file=trim(filepath)//".nc", exist=fexist)
-        if(fexist) then
-           nfile = nfile + 1
-           if(nfile > max_split_file) call mpp_error(FATAL, &
-                "fms_io(restore_state_all): nfile is larger than max_split_file, increase max_split_file")
-           call mpp_open(unit(nfile), trim(filepath), form=form,action=MPP_RDONLY,threading=MPP_MULTI, &
-                fileset=MPP_SINGLE)
-        else
-           exit
-        end if
-        num_restart = num_restart + 1
-     end do
-  end if
+      do while(.true.)
+          if (num_restart < 10) then
+              write(suffix,'("_",I1)') num_restart
+          else
+              write(suffix,'("_",I2)') num_restart
+          endif
+          if (num_restart > 0) then
+              siz = len_trim(restartpath)
+              if (restartpath(siz-2:siz) == ".nc") then
+                  filepath = restartpath(1:siz-3)//trim(suffix)
+              else
+                  filepath = trim(restartpath) // trim(suffix)
+              endif
+          else
+              filepath = trim(restartpath)
+          endif
+
+          inquire(file=trim(filepath),exist=fexist)
+          if (.not. fexist) inquire(file=trim(filepath)//".nc",exist=fexist)
+          if (fexist) then
+              nfile = nfile + 1
+              if (nfile > max_split_file) call mpp_error(FATAL, &
+                  "fms_io(restore_state_all): nfile is larger than max_split_file, increase max_split_file")
+
+              if (mpp_file_is_opened(trim(filepath),form)) then
+                  unit(nfile) = mpp_get_file_unit(trim(restartpath), &
+                                                  form)
+              else
+                  call mpp_open(unit(nfile), trim(filepath), form=form,action=MPP_RDONLY,threading=MPP_MULTI, &
+                                fileset=MPP_SINGLE)
+              endif
+          else
+              exit
+          endif
+          num_restart = num_restart + 1
+      enddo
+  endif
   if(nfile == 0) call mpp_error(FATAL, "fms_io(restore_state_all): unable to find any restart files "// &
        "specified by "//trim(restartpath))
-
 
   ! Read each variable from the first file in which it is found.
   do n=1,nfile
@@ -6847,9 +6862,9 @@ function open_namelist_file (file) result (unit)
 #endif
 
   if (.not.module_is_initialized) call fms_io_init ( )
+  unit = get_unit()
   if (present(file)) then
-     call mpp_open ( unit, file, form=MPP_ASCII, action=MPP_RDONLY, &
-          access=MPP_SEQUENTIAL, threading=MPP_SINGLE )
+     open(unit=unit,file=file,action="read")
   else
 !  the following code is necessary for using alternate namelist files (nests, stretched grids, etc)
      pelist_name = mpp_get_current_pelist_name()
@@ -6858,8 +6873,7 @@ function open_namelist_file (file) result (unit)
      else
         filename='input.nml'
      endif
-     call mpp_open ( unit, trim(filename), form=MPP_ASCII, action=MPP_RDONLY, &
-          access=MPP_SEQUENTIAL, threading=MPP_SINGLE )
+     open(unit=unit,file=trim(filename),action="read")
   endif
 end function open_namelist_file
 ! </FUNCTION>

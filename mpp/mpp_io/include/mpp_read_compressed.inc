@@ -149,7 +149,11 @@ subroutine mpp_read_compressed_array(context, &
                         file_index, &
                         domain)
 
-    total_data_size = int(sum(data_sizes),kind=c_int)
+    total_data_size = 1
+    do i = 1,size(data_sizes)
+        total_data_size = total_data_size*int(data_sizes(i),kind=c_int)
+    enddo
+
     if (total_data_size .gt. 0) then
 
         !Zero out the data inorder to get accurate checksums.
@@ -194,7 +198,7 @@ subroutine mpp_read_compressed_array(context, &
 
             !Get the I/O domain pelist.
             io_domain_ptr => null()
-            io_domain_ptr => context%files(file_index)%io_domain
+            io_domain_ptr => mpp_get_io_domain(domain)
             if (.not. associated(io_domain_ptr)) then
                 call mpp_error(FATAL, &
                                "mpp_read_compressed_array: io_domain must" &

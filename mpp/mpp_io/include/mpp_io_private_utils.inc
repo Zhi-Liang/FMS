@@ -125,12 +125,12 @@ subroutine domain2d_check(context, &
     type(domain2d),intent(in) :: domain
 
     if (.not. associated(context%files(file_index)%domain)) then
-        call mpp_error(FATAL, &
+!       call mpp_error(FATAL, &
+        call mpp_error(WARNING, &
                        "domain2d_check: the inputted context contains a" &
                            //" null 2d domain.")
-    endif
 
-    if (context%files(file_index)%domain .ne. domain) then
+    elseif (context%files(file_index)%domain .ne. domain) then
         call mpp_error(FATAL, &
                        "domain2d_check: the inputted 2d domain does not" &
                            //" match the domain stored in the inputted" &
@@ -153,12 +153,11 @@ subroutine domainUG_check(context, &
     type(domainUG),intent(in) :: domain
 
     if (.not. associated(context%files(file_index)%domain_UG)) then
-        call mpp_error(FATAL, &
+!       call mpp_error(FATAL, &
+        call mpp_error(WARNING, &
                        "domainUG_check: the inputted context contains a" &
                            //" null unstructured domain.")
-    endif
-
-    if (context%files(file_index)%domain_UG .ne. domain) then
+    elseif (context%files(file_index)%domain_UG .ne. domain) then
         call mpp_error(FATAL, &
                        "domainUG_check: the inputted unstructured domain" &
                            //" does not match the domain stored in the" &
