@@ -79,9 +79,17 @@ void cmpp_io_regular_file_destroy(cmpp_io_regular_file_t **self)
     null_regular_file_object(fptr);
 
     /*Make sure that the file is not still open.*/
+/*
+    Per Zhi's decision.
     error_check(!cmpp_io_file_props_get_is_open(fptr->file_props),
                 "file %s cannot be destroyed because it is still open.",
                 cmpp_io_file_props_get_name(fptr->file_props));
+*/
+    if (cmpp_io_file_props_get_is_open(fptr->file_props))
+    {
+        warn("file %s is being destroyed because it is still open.",
+             cmpp_io_file_props_get_name(fptr->file_props));
+    }
 
     /*Free malloced members.*/
     cmpp_io_safefree((void **)(&(fptr->file_props)));

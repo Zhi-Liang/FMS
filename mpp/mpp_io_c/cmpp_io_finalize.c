@@ -34,9 +34,14 @@ void cmpp_io_finalize(cmpp_io_context_t **context)
         {
             file_props = cmpp_io_netcdf_file_get_file_props((cmpp_io_netcdf_file_t *)fptr);
             file_name = cmpp_io_file_props_get_name(file_props);
+/*
             fatal("please first close netcdf file %s before finalizing the"
                       " cmpp_io library to prevent memory leaks.",
                   file_name);
+*/
+            warn("please first close netcdf file %s before finalizing the"
+                     " cmpp_io library to prevent memory leaks.",
+                 file_name);
         }
     }
 
@@ -51,9 +56,14 @@ void cmpp_io_finalize(cmpp_io_context_t **context)
         {
             file_props = cmpp_io_regular_file_get_file_props((cmpp_io_regular_file_t *)fptr);
             file_name = cmpp_io_file_props_get_name(file_props);
+/*
             fatal("please first close regular file %s before finalizing the"
                       " cmpp_io library to prevent memory leaks.",
                   file_name);
+*/
+            warn("please first close regular file %s before finalizing the"
+                     " cmpp_io library to prevent memory leaks.",
+                 file_name);
         }
     }
 
@@ -68,9 +78,14 @@ void cmpp_io_finalize(cmpp_io_context_t **context)
         {
             file_props = cmpp_io_hdf5_file_get_file_props((cmpp_io_hdf5_file_t *)fptr);
             file_name = cmpp_io_file_props_get_name(file_props);
+/*
             fatal("please first close hdf5 file %s before finalizing the"
                       " cmpp_io library to prevent memory leaks.",
                   file_name);
+*/
+            warn("please first close hdf5 file %s before finalizing the"
+                     " cmpp_io library to prevent memory leaks.",
+                 file_name);
         }
     }
 

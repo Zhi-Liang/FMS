@@ -220,10 +220,20 @@ void cmpp_io_netcdf_file_destroy(cmpp_io_netcdf_file_t **self)
     null_netcdf_file_object(fptr);
 
     /*Make sure that the file is not still open.*/
+/*
+    Per Zhi's decision.
+
     error_check(!cmpp_io_file_props_get_is_open(fptr->file_props),
                 "netcdf file %s cannot be destroyed because it is"
                     " still open.",
                 cmpp_io_file_props_get_name(fptr->file_props));
+*/
+    if (cmpp_io_file_props_get_is_open(fptr->file_props))
+    {
+        warn("netcdf file %s is being destroyed while it is"
+                 " still open.",
+             cmpp_io_file_props_get_name(fptr->file_props));
+    }
 
     /*Free malloced members.*/
     cmpp_io_file_props_destroy(&(fptr->file_props));

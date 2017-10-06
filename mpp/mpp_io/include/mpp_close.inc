@@ -35,6 +35,10 @@ subroutine mpp_close_(context, &
     f = check_file_index(context, &
                          file_index)
 
+if (mpp_pe() .eq. 0) then
+    write(6,*) "closed file unit",f
+endif
+
     !Deallocate context arrays and nullify context pointers.
     if (allocated(context%files(file_index)%rank_list)) then
         deallocate(context%files(file_index)%rank_list)

@@ -631,6 +631,11 @@ subroutine mpp_open_(context, &
                                                      MPP_IO_C_MAX_METADATA_BYTES_PER_FILE)
             deallocate(c_fname)
 
+if (mpp_pe() .eq. 0) then
+    write(6,*) "opened file "//trim(fname_full)//" as unit",file_index_c
+endif
+
+
             !Convert from valid c file index to fortran file index.
             file_index = convert_c_file_index(context, &
                                               MPP_NETCDF, &

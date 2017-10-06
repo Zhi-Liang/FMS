@@ -195,7 +195,7 @@ subroutine mpp_write_meta_field_(context, &
         endif
 
         !Place the name in an interoperable buffer.
-        name_len = len(var_name)
+        name_len = len_trim(var_name)
         allocate(name_buf(name_len+1))
         do i = 1,name_len
             name_buf(i) = var_name(i:i)
@@ -290,7 +290,7 @@ subroutine mpp_write_meta_field_(context, &
                                           file_index, &
                                           variable_index, &
                                           "long_name", &
-                                          len(longname,kind=c_size_t), &
+                                          len_trim(longname,kind=c_size_t), &
                                           cval=longname)
 
         if (lowercase(trim(units)) .ne. "none" .or. .not. cf_compliance) then
@@ -298,7 +298,7 @@ subroutine mpp_write_meta_field_(context, &
                                               file_index, &
                                               variable_index, &
                                               "units", &
-                                              len(units,kind=c_size_t), &
+                                              len_trim(units,kind=c_size_t), &
                                               cval=units)
         endif
 
@@ -471,7 +471,7 @@ subroutine mpp_write_meta_field_(context, &
                                               file_index, &
                                               variable_index, &
                                               "checksum", &
-                                              len(checksum_char,kind=c_size_t), &
+                                              len_trim(checksum_char,kind=c_size_t), &
                                               cval=checksum_char)
         endif
 
@@ -480,7 +480,7 @@ subroutine mpp_write_meta_field_(context, &
                                               file_index, &
                                               variable_index, &
                                               "cell_methods", &
-                                              len(time_method,kind=c_size_t)+6, &
+                                              len_trim(time_method,kind=c_size_t)+6, &
                                               cval="time: "//trim(time_method))
         endif
 
@@ -489,7 +489,7 @@ subroutine mpp_write_meta_field_(context, &
                                               file_index, &
                                               variable_index, &
                                               "standard_name", &
-                                              len(time_method,kind=c_size_t), &
+                                              len_trim(time_method,kind=c_size_t), &
                                               cval=standard_name)
         endif
     endif

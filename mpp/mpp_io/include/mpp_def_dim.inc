@@ -96,7 +96,7 @@ subroutine mpp_def_dim_nodata_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the name in an interoperable buffer.
-        name_len = len(dim_name)
+        name_len = len_trim(dim_name)
         allocate(name_buf(name_len+1))
         do i = 1,name_len
             name_buf(i) = dim_name(i:i)
@@ -150,7 +150,7 @@ subroutine mpp_def_dim_int_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the name in an interoperable buffer.
-        name_len = len(dim_name)
+        name_len = len_trim(dim_name)
         allocate(name_buf(name_len+1))
         do i = 1,name_len
             name_buf(i) = dim_name(i:i)
@@ -237,7 +237,7 @@ subroutine mpp_def_dim_real_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the name in an interoperable buffer.
-        name_len = len(dim_name)
+        name_len = len_trim(dim_name)
         allocate(name_buf(name_len+1))
         do i = 1,name_len
             name_buf(i) = dim_name(i:i)

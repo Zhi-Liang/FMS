@@ -166,7 +166,7 @@ subroutine mpp_write_meta_axis_i1d_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the name in an interoperable buffer.
-        name_len = len(dim_name)
+        name_len = len_trim(dim_name)
         allocate(name_buf(name_len+1))
         do i = 1,name_len
             name_buf(i) = dim_name(i:i)
@@ -222,7 +222,7 @@ subroutine mpp_write_meta_axis_i1d_(context, &
                                           file_index, &
                                           variable_index, &
                                           "long_name", &
-                                          len(longname,kind=c_size_t), &
+                                          len_trim(longname,kind=c_size_t), &
                                           cval=longname)
 
         if (lowercase(trim(units)) .ne. "none" .or. .not. cf_compliance) then
@@ -230,7 +230,7 @@ subroutine mpp_write_meta_axis_i1d_(context, &
                                               file_index, &
                                               variable_index, &
                                               "units", &
-                                              len(units,kind=c_size_t), &
+                                              len_trim(units,kind=c_size_t), &
                                               cval=units)
         endif
 
@@ -239,7 +239,7 @@ subroutine mpp_write_meta_axis_i1d_(context, &
                                               file_index, &
                                               variable_index, &
                                               "compress", &
-                                              len(compressed,kind=c_size_t), &
+                                              len_trim(compressed,kind=c_size_t), &
                                               cval=compressed)
         endif
 
@@ -384,7 +384,7 @@ subroutine mpp_write_meta_axis_r1d_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the dimension name in an interoperable buffer.
-        name_len = len(dim_name)
+        name_len = len_trim(dim_name)
         allocate(name_buf(name_len+1))
         do i = 1,name_len
             name_buf(i) = dim_name(i:i)
@@ -527,7 +527,7 @@ subroutine mpp_write_meta_axis_r1d_(context, &
                                           file_index, &
                                           variable_index, &
                                           "long_name", &
-                                          len(longname,kind=c_size_t), &
+                                          len_trim(longname,kind=c_size_t), &
                                           cval=longname)
 
         if (lowercase(trim(units)) .ne. "none" .or. .not. cf_compliance) then
@@ -535,7 +535,7 @@ subroutine mpp_write_meta_axis_r1d_(context, &
                                               file_index, &
                                               variable_index, &
                                               "units", &
-                                              len(units,kind=c_size_t), &
+                                              len_trim(units,kind=c_size_t), &
                                               cval=units)
         endif
 
@@ -545,14 +545,14 @@ subroutine mpp_write_meta_axis_r1d_(context, &
                                                   file_index, &
                                                   variable_index, &
                                                   "calendar", &
-                                                  len(calendar,kind=c_size_t), &
+                                                  len_trim(calendar,kind=c_size_t), &
                                                   cval=calendar)
             else
                 call mpp_write_attribute_metadata(context, &
                                                   file_index, &
                                                   variable_index, &
                                                   "calendar", &
-                                                  len(calendar,kind=c_size_t), &
+                                                  len_trim(calendar,kind=c_size_t), &
                                                   cval=lowercase(calendar))
             endif
         endif
@@ -563,7 +563,7 @@ subroutine mpp_write_meta_axis_r1d_(context, &
                                                   file_index, &
                                                   variable_index, &
                                                   "cartesian_axis", &
-                                                  len(cartesian,kind=c_size_t), &
+                                                  len_trim(cartesian,kind=c_size_t), &
                                                   cval=cartesian)
             else
                 if (trim(cartesian) .ne. 'N') then
@@ -571,7 +571,7 @@ subroutine mpp_write_meta_axis_r1d_(context, &
                                                       file_index, &
                                                       variable_index, &
                                                       "axis", &
-                                                      len(cartesian,kind=c_size_t), &
+                                                      len_trim(cartesian,kind=c_size_t), &
                                                       cval=cartesian)
                 endif
             endif
@@ -655,7 +655,7 @@ subroutine mpp_write_meta_axis_unlimited_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the name in an interoperable buffer.
-        name_len = len(dim_name)
+        name_len = len_trim(dim_name)
         allocate(name_buf(name_len+1))
         do i = 1,name_len
             name_buf(i) = dim_name(i:i)
@@ -707,7 +707,7 @@ subroutine mpp_write_meta_axis_unlimited_(context, &
                                               file_index, &
                                               variable_index, &
                                               "long_name", &
-                                              len(longname,kind=c_size_t), &
+                                              len_trim(longname,kind=c_size_t), &
                                               cval=longname)
         endif
 
@@ -717,7 +717,7 @@ subroutine mpp_write_meta_axis_unlimited_(context, &
                                                   file_index, &
                                                   variable_index, &
                                                   "units", &
-                                                  len(units,kind=c_size_t), &
+                                                  len_trim(units,kind=c_size_t), &
                                                   cval=units)
             endif
         endif

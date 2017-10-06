@@ -516,12 +516,23 @@ int cmpp_io_context_add_file(cmpp_io_context_t * const * const self,
                                                 file_type,
                                                 &empty_index);
 
+/*
+    Per Zhi's decision.  Almost certainly going to lead to memory leaks.
+
     error_check(file_index == CMPP_IO_INDEX_NOT_FOUND,
                 "the file %s already exists for the inputted context."
                     "  This means the file has most likely already been"
                     " opened.",
                 file_name);
     file_name = NULL;
+*/
+    if (file_index != CMPP_IO_INDEX_NOT_FOUND)
+    {
+        warn("the file %s was already opened. Opening"
+                 " it again will leak memory unless the file"
+                 " is closed once for each time that it was opened.",
+             file_name);
+    }
 
     if (empty_index == CMPP_IO_INDEX_NOT_FOUND)
     {

@@ -45,7 +45,7 @@ function mpp_get_axis_by_name_(context, &
     out_axis = default_axis
 
     !Copy the dimension name into a buffer that is interoperable with c.
-    name_len = len(axisname)
+    name_len = len_trim(axisname)
     allocate(name_buf(name_len+1))
     do i = 1,name_len
         name_buf(i) = axisname(i:i)

@@ -7024,12 +7024,24 @@ subroutine close_file (unit, status, dist)
   if (unit == stdlog()) return
   if (present(status)) then
      if (lowercase(trim(status)) == 'delete') then
+
+if (mpp_pe() .eq. 0) then
+    write(6,*) "closed fortran unit",unit
+endif
+
         call mpp_close (unit, action=MPP_DELETE)
+!       close(unit)
      else
         call mpp_error(FATAL,'fms_io(close_file): status should be DELETE')
      endif
   else
+
+if (mpp_pe() .eq. 0) then
+    write(6,*) "closed fortran unit",unit
+endif
+
      call mpp_close (unit)
+!    close(unit)
   endif
 end subroutine close_file
 ! </FUNCTION>

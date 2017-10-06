@@ -2,13 +2,23 @@
 !Throw a fatal error if this routine is called in an openmp threaded region.
 subroutine openmp_thread_trap()
 #ifdef _OPENMP
-    use omp_lib, only: omp_get_level
+    use omp_lib, only: omp_get_level, &
+                       omp_get_team_size
     implicit none
 
-    if (omp_get_level() .ne. 0) then
-        call mpp_error(FATAL, &
-                       "openmp_thread_trap: the calling routine is not" &
-                           //" guaranteed to be OpenMP thread-safe.")
+    !Local variables
+    integer(kind=c_int) :: nest_level
+    integer(kind=c_int) :: i
+
+    nest_level = omp_get_level()
+    if (nest_level .ne. 0) then
+        do i = 1,nest_level
+            if (omp_get_team_size(i) .ne. 1) then
+                call mpp_error(FATAL, &
+                               "openmp_thread_trap: the calling routine is not" &
+                                   //" guaranteed to be OpenMP thread-safe.")
+            endif
+        enddo
     endif
 
 #endif
@@ -423,6 +433,7 @@ subroutine fill_atttype_from_index(context, &
             call c_f_pointer(ptr, &
                              f_char_ptr, &
                              [att%len])
+            att%catt = ""
             do i = 1,att%len
                 att%catt(i:i) = f_char_ptr(i)
             enddo
@@ -511,8 +522,9 @@ subroutine fill_axistype_from_index(context, &
     character(kind=c_char,len=1),dimension(:),allocatable,target :: bounds_name_buf
     integer(kind=c_int) :: data_size
     integer(kind=c_int) :: data_bounds_size
-    integer(kind=c_size_t),dimension(2) :: corner_indices
-    integer(kind=c_size_t),dimension(2) :: edge_lengths
+    integer(kind=c_size_t),dimension(:),allocatable :: corner_indices
+    integer(kind=c_size_t),dimension(:),allocatable :: edge_lengths
+    integer(kind=c_int) :: bnum_dims
 
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
@@ -698,7 +710,7 @@ subroutine fill_axistype_from_index(context, &
 
                     !Get the index of the variable that corresponds to the
                     !"data bounds".
-                    bounds_name_len = len(bounds_name)
+                    bounds_name_len = len_trim(bounds_name)
                     allocate(bounds_name_buf(bounds_name_len+1))
                     do i = 1,bounds_name_len
                         bounds_name_buf(i) = bounds_name(i:i)
@@ -706,34 +718,52 @@ subroutine fill_axistype_from_index(context, &
                     bounds_name_buf(bounds_name_len+1) = c_null_char
                     bounds_var_index = mpp_io_c_get_netcdf_variable_index(f, &
                                                                           c_loc(bounds_name_buf))
-                    deallocate(bounds_name_buf)
 
                     if (bounds_var_index .ne. MPP_IO_C_INDEX_NOT_FOUND) then
 
+                        if (mpp_io_c_get_netcdf_dimension_index(f,c_loc(bounds_name_buf)) &
+                                .ne. MPP_IO_C_INDEX_NOT_FOUND) then
+                            bnum_dims = 1
+                        else
+                            bnum_dims = 2
+                        endif
+
                         !Make sure the "data bounds" variable is two dimensional.
-                        if (mpp_io_c_get_netcdf_variable_num_dimensions(f,bounds_var_index) .ne. 2) then
+                        if (mpp_io_c_get_netcdf_variable_num_dimensions(f,bounds_var_index) .ne. bnum_dims) then
                             call mpp_error(FATAL, &
                                            "fill_axis_type_from_index: data bounds" &
-                                               //" variables must be two dimensional.")
+                                               //" variables has incorrect number of dimensions.")
                         endif
 
                         !Make sure that the dimensions of the "data bounds"
                         !variable have the correct lengths.
-                        bounds_dim_index = mpp_io_c_get_netcdf_dimension_index(f, &
-                                                                               bounds_var_index, &
-                                                                           0)
-                        if (mpp_io_c_get_netcdf_dimension_length(f,bounds_dim_index) .ne. size(axis%data)) then
-                            call mpp_error(FATAL, &
-                                           "fill_axis_type_from_index: incorrect size" &
-                                               //" for data bounds variable.")
-                        endif
-                        bounds_dim_index = mpp_io_c_get_netcdf_dimension_index(f, &
-                                                                               bounds_var_index, &
-                                                                           1)
-                        if (mpp_io_c_get_netcdf_dimension_length(f,bounds_dim_index) .ne. 2) then
-                            call mpp_error(FATAL, &
-                                           "fill_axis_type_from_index: incorrect size" &
-                                               //" for data bounds variable.")
+                        if (bnum_dims .eq. 1) then
+                            bounds_dim_index = mpp_io_c_get_netcdf_dimension_index(f, &
+                                                                                   bounds_var_index, &
+                                                                                   0)
+                            if (mpp_io_c_get_netcdf_dimension_length(f,bounds_dim_index) .ne. size(axis%data)+1) then
+                                call mpp_error(FATAL, &
+                                               "fill_axis_type_from_index: incorrect size" &
+                                                   //" for data bounds variable.")
+                            endif
+                        else
+                            bounds_dim_index = mpp_io_c_get_netcdf_dimension_index(f, &
+                                                                                   bounds_var_index, &
+                                                                                   0)
+                            if (mpp_io_c_get_netcdf_dimension_length(f,bounds_dim_index) .ne. size(axis%data)) then
+                                call mpp_error(FATAL, &
+                                               "fill_axis_type_from_index: incorrect size" &
+                                                   //" for data bounds variable.")
+                            endif
+
+                            bounds_dim_index = mpp_io_c_get_netcdf_dimension_index(f, &
+                                                                                   bounds_var_index, &
+                                                                                   1)
+                            if (mpp_io_c_get_netcdf_dimension_length(f,bounds_dim_index) .ne. 2) then
+                                call mpp_error(FATAL, &
+                                               "fill_axis_type_from_index: incorrect size" &
+                                                   //" for data bounds variable.")
+                            endif
                         endif
 
                         !Get the type of the data bounds variable.
@@ -744,14 +774,22 @@ subroutine fill_axistype_from_index(context, &
                         axis%name_bounds = trim(bounds_name)
                         data_size = size(axis%data)
                         data_bounds_size = data_size + 1
+                        allocate(corner_indices(bnum_dims))
+                        allocate(edge_lengths(bnum_dims))
                         allocate(axis%data_bounds(data_bounds_size))
+
                         corner_indices(1) = int(0,kind=c_size_t)
-                        corner_indices(2) = int(0,kind=c_size_t)
-                        edge_lengths(1) = int(data_size,kind=c_size_t)
-                        edge_lengths(2) = int(2,kind=c_size_t)
+                        if (bnum_dims .eq. 1) then
+                            edge_lengths(1) = int(data_bounds_size,kind=c_size_t)
+                        else
+                            edge_lengths(1) = int(data_size,kind=c_size_t)
+                            corner_indices(2) = int(0,kind=c_size_t)
+                            edge_lengths(2) = int(2,kind=c_size_t)
+                        endif
+
                         select case (bounds_var_type)
                             case (MPP_IO_C_NC_INT)
-                                allocate(int_buf(2*data_size))
+                                allocate(int_buf(bnum_dims*edge_lengths(1)))
                                 ptr = c_loc(int_buf)
                                 call mpp_io_c_read_netcdf_variable_data(f, &
                                                                         bounds_var_index, &
@@ -760,14 +798,18 @@ subroutine fill_axistype_from_index(context, &
                                                                         ptr, &
                                                                         bounds_var_type)
                                 ptr = c_null_ptr
-                                do i = 1,data_bounds_size-1
-                                    axis%data_bounds(i) = real(int_buf(2*i-1),kind=c_double)
-                                enddo
-                                axis%data_bounds(data_bounds_size) = int_buf(2*data_size)
+                                if (bnum_dims .eq. 1) then
+                                    axis%data_bounds(:) = real(int_buf(:),kind=c_double)
+                                else
+                                    do i = 1,data_size
+                                        axis%data_bounds(i) = real(int_buf(2*i-1),kind=c_double)
+                                    enddo
+                                    axis%data_bounds(data_bounds_size) = int_buf(2*data_size)
+                                endif
                                 deallocate(int_buf)
 
                             case (MPP_IO_C_NC_FLOAT)
-                                allocate(float_buf(2*data_size))
+                                allocate(float_buf(bnum_dims*edge_lengths(1)))
                                 ptr = c_loc(float_buf)
                                 call mpp_io_c_read_netcdf_variable_data(f, &
                                                                         bounds_var_index, &
@@ -776,14 +818,18 @@ subroutine fill_axistype_from_index(context, &
                                                                         ptr, &
                                                                         bounds_var_type)
                                 ptr = c_null_ptr
-                                do i = 1,data_bounds_size-1
-                                    axis%data_bounds(i) = real(float_buf(2*i-1),kind=c_double)
-                                enddo
-                                axis%data_bounds(data_bounds_size) = float_buf(2*data_size)
+                                if (bnum_dims .eq. 1) then
+                                    axis%data_bounds(:) = real(float_buf(:),kind=c_double)
+                                else
+                                    do i = 1,data_size
+                                        axis%data_bounds(i) = real(float_buf(2*i-1),kind=c_double)
+                                    enddo
+                                    axis%data_bounds(data_bounds_size) = float_buf(2*data_size)
+                                endif
                                 deallocate(float_buf)
 
                             case (MPP_IO_C_NC_DOUBLE)
-                                allocate(double_buf(2*data_size))
+                                allocate(double_buf(bnum_dims*edge_lengths(1)))
                                 ptr = c_loc(double_buf)
                                 call mpp_io_c_read_netcdf_variable_data(f, &
                                                                         bounds_var_index, &
@@ -792,10 +838,14 @@ subroutine fill_axistype_from_index(context, &
                                                                         ptr, &
                                                                         bounds_var_type)
                                 ptr = c_null_ptr
-                                do i = 1,data_bounds_size-1
-                                    axis%data_bounds(i) = double_buf(2*i-1)
-                                enddo
-                                axis%data_bounds(data_bounds_size) = double_buf(2*data_size)
+                                if (bnum_dims .eq. 1) then
+                                    axis%data_bounds(:) = double_buf(:)
+                                else
+                                    do i = 1,data_size
+                                        axis%data_bounds(i) = double_buf(2*i-1)
+                                    enddo
+                                    axis%data_bounds(data_bounds_size) = double_buf(2*data_size)
+                                endif
                                 deallocate(double_buf)
 
                             case default
@@ -803,7 +853,10 @@ subroutine fill_axistype_from_index(context, &
                                                "fill_axis_type_from_index: invalid" &
                                                    //"type for bounds variable.")
                         end select
+                        deallocate(corner_indices)
+                        deallocate(edge_lengths)
                     endif
+                    deallocate(bounds_name_buf)
                 endif
             endif
         else

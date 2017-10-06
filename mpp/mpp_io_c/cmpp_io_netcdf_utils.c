@@ -285,7 +285,9 @@ int cmpp_io_get_ncflags(void)
     int ncflags = 0;
 
     /*Flags for netCDF classic mode.*/
+/*
     ncflags = NC_NETCDF4 | NC_CLASSIC_MODEL;
+*/
 
     return ncflags;
 }

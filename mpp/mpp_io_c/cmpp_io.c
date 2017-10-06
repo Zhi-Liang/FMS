@@ -21,16 +21,26 @@
 #endif
 
 /*Library context.*/
-static cmpp_io_context_t *context;
+static cmpp_io_context_t *c_context;
 
 /*Helper macros.*/
 #ifdef _OPENMP
 #define trap_openmp_thread(void) \
-    int threading_level = omp_get_level(); \
-    error_check(threading_level == 0, \
-                "this routine is not thread-safe, but is being called" \
-                    " in an OpenMP threaded region (OpenMP level = %d).", \
-                threading_level);
+    int nest_level = omp_get_level(); \
+    int i; \
+    if (nest_level != 0) \
+    { \
+        for (i=0;i<nest_level;++i) \
+        { \
+            error_check(omp_get_team_size(i) == 1, \
+                        "this routine is not thread-safe, but is being" \
+                            " called in an OpenMP threaded region" \
+                            " (OpenMP nest level = %d) with a team size" \
+                            "%d.\n", \
+                        nest_level, \
+                        omp_get_team_size(i)); \
+        } \
+    }
 #else
 #define trap_openmp_thread(void)
 #endif
@@ -64,7 +74,7 @@ void mpp_io_c_init(int const max_num_netcdf_files,
     trap_openmp_thread();
 
     /*Initialize the cmpp_io library.*/
-    cmpp_io_init(&context,
+    cmpp_io_init(&c_context,
                  max_num_netcdf_files,
                  max_num_regular_files,
                  max_num_hdf5_files,
@@ -86,7 +96,7 @@ void mpp_io_c_finalize(void)
     trap_openmp_thread();
 
     /*Finalize the cmpp_io library.*/
-    cmpp_io_finalize(&context);
+    cmpp_io_finalize(&c_context);
 
     return;
 }
@@ -99,7 +109,7 @@ int mpp_io_c_open_regular_file(char * const fname,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_open_regular_file(&context,
+    return cmpp_io_open_regular_file(&c_context,
                                      fname,
                                      action);
 }
@@ -114,7 +124,7 @@ void mpp_io_c_close_regular_file(int * const file_index,
     trap_openmp_thread();
 
     /*Open the file.*/
-    cmpp_io_close_regular_file(&context,
+    cmpp_io_close_regular_file(&c_context,
                                file_index,
                                action,
                                do_warn);
@@ -130,7 +140,7 @@ void mpp_io_c_flush_regular_file(int const file_index)
     trap_openmp_thread();
 
     /*Open the file.*/
-    cmpp_io_flush_regular_file(context,
+    cmpp_io_flush_regular_file(c_context,
                                file_index);
 
     return;
@@ -150,7 +160,7 @@ void mpp_io_c_fread_regular_file(int const file_index,
     trap_openmp_thread();
 
     /*Read from the file.*/
-    cmpp_io_fread_regular_file(context,
+    cmpp_io_fread_regular_file(c_context,
                                file_index,
                                num_vals,
                                data_type,
@@ -177,7 +187,7 @@ int mpp_io_c_open_netcdf_file(char * const fname,
     trap_openmp_thread();
 
     /*Open the file.*/
-    return cmpp_io_open_netcdf_file(&context,
+    return cmpp_io_open_netcdf_file(&c_context,
                                     fname,
                                     action,
                                     max_num_global_attributes,
@@ -198,7 +208,7 @@ void mpp_io_c_close_netcdf_file(int * const file_index,
     trap_openmp_thread();
 
     /*Open the file.*/
-    cmpp_io_close_netcdf_file(&context,
+    cmpp_io_close_netcdf_file(&c_context,
                               file_index,
                               action,
                               do_warn);
@@ -214,7 +224,7 @@ void mpp_io_c_flush_netcdf_file(int const file_index)
     trap_openmp_thread();
 
     /*Open the file.*/
-    cmpp_io_flush_netcdf_file(context,
+    cmpp_io_flush_netcdf_file(c_context,
                               file_index);
 
     return;
@@ -229,7 +239,7 @@ int mpp_io_c_read_netcdf_attribute(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_read_netcdf_attribute(context,
+    return cmpp_io_read_netcdf_attribute(c_context,
                                          file_index,
                                          get_variable_param(variable_index),
                                          netcdf_attribute_id);
@@ -249,7 +259,7 @@ int mpp_io_c_write_netcdf_attribute(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_write_netcdf_attribute(context,
+    return cmpp_io_write_netcdf_attribute(c_context,
                                           file_index,
                                           get_variable_param(variable_index),
                                           get_nc_type(type_in_file),
@@ -269,7 +279,7 @@ void mpp_io_c_free_netcdf_attribute(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_free_netcdf_attribute(context,
+    cmpp_io_free_netcdf_attribute(c_context,
                                   file_index,
                                   get_variable_param(variable_index),
                                   attribute_index);
@@ -286,7 +296,7 @@ int mpp_io_c_get_netcdf_attribute_index(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_attribute_index(context,
+    return cmpp_io_get_netcdf_attribute_index(c_context,
                                               file_index,
                                               get_variable_param(variable_index),
                                               att_name);
@@ -301,7 +311,7 @@ char *mpp_io_c_get_netcdf_attribute_name(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_attribute_name(context,
+    return cmpp_io_get_netcdf_attribute_name(c_context,
                                              file_index,
                                              get_variable_param(variable_index),
                                              attribute_index);
@@ -316,7 +326,7 @@ int mpp_io_c_get_netcdf_attribute_type_in_file(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return get_int_from_nc_type(cmpp_io_get_netcdf_attribute_type_in_file(context,
+    return get_int_from_nc_type(cmpp_io_get_netcdf_attribute_type_in_file(c_context,
                                                                           file_index,
                                                                           get_variable_param(variable_index),
                                                                           attribute_index));
@@ -331,7 +341,7 @@ int mpp_io_c_get_netcdf_attribute_type_in_mem(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return get_int_from_nc_type(cmpp_io_get_netcdf_attribute_type_in_mem(context,
+    return get_int_from_nc_type(cmpp_io_get_netcdf_attribute_type_in_mem(c_context,
                                                                          file_index,
                                                                          get_variable_param(variable_index),
                                                                          attribute_index));
@@ -346,7 +356,7 @@ size_t mpp_io_c_get_netcdf_attribute_num_values(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_attribute_num_values(context,
+    return cmpp_io_get_netcdf_attribute_num_values(c_context,
                                                    file_index,
                                                    get_variable_param(variable_index),
                                                    attribute_index);
@@ -361,7 +371,7 @@ void *mpp_io_c_get_netcdf_attribute_values(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_attribute_values(context,
+    return cmpp_io_get_netcdf_attribute_values(c_context,
                                                file_index,
                                                get_variable_param(variable_index),
                                                attribute_index);
@@ -375,7 +385,7 @@ int mpp_io_c_read_netcdf_dimension(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_read_netcdf_dimension(context,
+    return cmpp_io_read_netcdf_dimension(c_context,
                                          file_index,
                                          netcdf_dimension_id);
 }
@@ -390,7 +400,7 @@ int mpp_io_c_write_netcdf_dimension(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_write_netcdf_dimension(context,
+    return cmpp_io_write_netcdf_dimension(c_context,
                                           file_index,
                                           name,
                                           get_length_param(length),
@@ -405,7 +415,7 @@ void mpp_io_c_advance_netcdf_dimension_level(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_advance_netcdf_dimension_level(context,
+    cmpp_io_advance_netcdf_dimension_level(c_context,
                                            file_index,
                                            dimension_index);
 
@@ -420,7 +430,7 @@ void mpp_io_c_free_netcdf_dimension(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_free_netcdf_dimension(context,
+    cmpp_io_free_netcdf_dimension(c_context,
                                   file_index,
                                   dimension_index);
     return;
@@ -435,7 +445,7 @@ int mpp_io_c_get_netcdf_dimension_index_global(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_dimension_index(context,
+    return cmpp_io_get_netcdf_dimension_index(c_context,
                                               file_index,
                                               dim_name);
 }
@@ -451,7 +461,7 @@ int mpp_io_c_get_netcdf_dimension_index_variable(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_convert_netcdf_variable_dimension_index(context,
+    return cmpp_io_convert_netcdf_variable_dimension_index(c_context,
                                                            file_index,
                                                            variable_index,
                                                            dimension_index);
@@ -465,7 +475,7 @@ char *mpp_io_c_get_netcdf_dimension_name(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_dimension_name(context,
+    return cmpp_io_get_netcdf_dimension_name(c_context,
                                              file_index,
                                              dimension_index);
 }
@@ -478,7 +488,7 @@ size_t mpp_io_c_get_netcdf_dimension_length(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_dimension_length(context,
+    return cmpp_io_get_netcdf_dimension_length(c_context,
                                                file_index,
                                                dimension_index);
 }
@@ -491,7 +501,7 @@ bool mpp_io_c_get_netcdf_dimension_is_unlimited(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_dimension_is_unlimited(context,
+    return cmpp_io_get_netcdf_dimension_is_unlimited(c_context,
                                                      file_index,
                                                      dimension_index);
 }
@@ -504,7 +514,7 @@ int mpp_io_c_get_netcdf_dimension_current_level(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_dimension_current_level(context,
+    return cmpp_io_get_netcdf_dimension_current_level(c_context,
                                                       file_index,
                                                       dimension_index);
 }
@@ -517,7 +527,7 @@ int mpp_io_c_get_netcdf_dimension_id(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_dimension_id(context,
+    return cmpp_io_get_netcdf_dimension_id(c_context,
                                            file_index,
                                            dimension_index);
 }
@@ -530,7 +540,7 @@ int mpp_io_c_read_netcdf_variable_metadata(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_read_netcdf_variable_metadata(context,
+    return cmpp_io_read_netcdf_variable_metadata(c_context,
                                                  file_index,
                                                  netcdf_variable_id);
 }
@@ -548,7 +558,7 @@ int mpp_io_c_write_netcdf_variable_metadata(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_write_netcdf_variable_metadata(context,
+    return cmpp_io_write_netcdf_variable_metadata(c_context,
                                                   file_index,
                                                   get_nc_type(type_in_file),
                                                   name,
@@ -570,7 +580,7 @@ void mpp_io_c_read_netcdf_variable_data(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_read_netcdf_variable_data(context,
+    cmpp_io_read_netcdf_variable_data(c_context,
                                       file_index,
                                       variable_index,
                                       corner_indices,
@@ -593,7 +603,7 @@ void mpp_io_c_write_netcdf_variable_data(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_write_netcdf_variable_data(context,
+    cmpp_io_write_netcdf_variable_data(c_context,
                                        file_index,
                                        variable_index,
                                        corner_indices,
@@ -618,7 +628,7 @@ void mpp_io_c_buffer_netcdf_variable_data(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_buffer_netcdf_variable_data(context,
+    cmpp_io_buffer_netcdf_variable_data(c_context,
                                         file_index,
                                         variable_index,
                                         corner_indices,
@@ -639,7 +649,7 @@ void mpp_io_c_write_buffered_netcdf_variable_data(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_write_buffered_netcdf_variable_data(context,
+    cmpp_io_write_buffered_netcdf_variable_data(c_context,
                                                 file_index,
                                                 variable_index,
                                                 free_data);
@@ -655,7 +665,7 @@ void mpp_io_c_free_netcdf_variable(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_free_netcdf_variable(context,
+    cmpp_io_free_netcdf_variable(c_context,
                                  file_index,
                                  variable_index);
 
@@ -671,7 +681,7 @@ int mpp_io_c_get_netcdf_variable_index(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_index(context,
+    return cmpp_io_get_netcdf_variable_index(c_context,
                                              file_index,
                                              var_name);
 }
@@ -685,7 +695,7 @@ bool mpp_io_c_get_netcdf_variable_is_data_buffered(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_is_data_buffered(context,
+    return cmpp_io_get_netcdf_variable_is_data_buffered(c_context,
                                                         file_index,
                                                         variable_index);
 }
@@ -699,7 +709,7 @@ int mpp_io_c_get_netcdf_variable_max_num_attributes(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_max_num_attributes(context,
+    return cmpp_io_get_netcdf_variable_max_num_attributes(c_context,
                                                           file_index,
                                                           variable_index);
 }
@@ -712,7 +722,7 @@ char *mpp_io_c_get_netcdf_variable_name(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_name(context,
+    return cmpp_io_get_netcdf_variable_name(c_context,
                                             file_index,
                                             variable_index);
 }
@@ -726,7 +736,7 @@ int mpp_io_c_get_netcdf_variable_type_in_file(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return get_int_from_nc_type(cmpp_io_get_netcdf_variable_type_in_file(context,
+    return get_int_from_nc_type(cmpp_io_get_netcdf_variable_type_in_file(c_context,
                                                                          file_index,
                                                                          variable_index));
 }
@@ -739,7 +749,7 @@ int mpp_io_c_get_netcdf_variable_num_dimensions(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_num_dimensions(context,
+    return cmpp_io_get_netcdf_variable_num_dimensions(c_context,
                                                       file_index,
                                                       variable_index);
 }
@@ -753,7 +763,7 @@ int mpp_io_c_get_netcdf_variable_num_attributes(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_num_attributes(context,
+    return cmpp_io_get_netcdf_variable_num_attributes(c_context,
                                                       file_index,
                                                       variable_index);
 }
@@ -766,7 +776,7 @@ int mpp_io_c_get_netcdf_variable_id(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_id(context,
+    return cmpp_io_get_netcdf_variable_id(c_context,
                                           file_index,
                                           variable_index);
 }
@@ -780,7 +790,7 @@ void *mpp_io_c_get_netcdf_variable_buffered_data(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_buffered_data(context,
+    return cmpp_io_get_netcdf_variable_buffered_data(c_context,
                                                      file_index,
                                                      variable_index);
 }
@@ -794,7 +804,7 @@ size_t *mpp_io_c_get_netcdf_variable_corner_indices(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_corner_indices(context,
+    return cmpp_io_get_netcdf_variable_corner_indices(c_context,
                                                       file_index,
                                                       variable_index);
 }
@@ -808,7 +818,7 @@ size_t *mpp_io_c_get_netcdf_variable_edge_lengths(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_variable_edge_lengths(context,
+    return cmpp_io_get_netcdf_variable_edge_lengths(c_context,
                                                     file_index,
                                                     variable_index);
 }
@@ -822,7 +832,7 @@ int mpp_io_c_get_netcdf_variable_type_in_mem(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return get_int_from_nc_type(cmpp_io_get_netcdf_variable_type_in_mem(context,
+    return get_int_from_nc_type(cmpp_io_get_netcdf_variable_type_in_mem(c_context,
                                                                         file_index,
                                                                         variable_index));
 }
@@ -856,7 +866,7 @@ void mpp_io_c_nc_inq(int const file_index,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    cmpp_io_nc_inq(context,
+    cmpp_io_nc_inq(c_context,
                    file_index,
                    num_global_atts,
                    num_dims,
@@ -872,7 +882,7 @@ char *mpp_io_c_get_netcdf_file_name(int const file_index)
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_file_name(context,
+    return cmpp_io_get_netcdf_file_name(c_context,
                                         file_index);
 }
 
@@ -883,7 +893,7 @@ char *mpp_io_c_get_regular_file_name(int const file_index)
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_regular_file_name(context,
+    return cmpp_io_get_regular_file_name(c_context,
                                          file_index);
 }
 
@@ -894,7 +904,7 @@ bool mpp_io_c_get_netcdf_file_is_open_by_index(int const file_index)
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_netcdf_file_is_open(context,
+    return cmpp_io_get_netcdf_file_is_open(c_context,
                                            file_index);
 }
 
@@ -909,14 +919,14 @@ bool mpp_io_c_get_netcdf_file_is_open_by_name(char * const name)
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    file_index = cmpp_io_context_get_file_index(context,
+    file_index = cmpp_io_context_get_file_index(c_context,
                                                 name,
                                                 CMPP_NETCDF,
                                                 &empty_index);
 
     if (file_index != CMPP_IO_INDEX_NOT_FOUND)
     {
-        return cmpp_io_get_netcdf_file_is_open(context,
+        return cmpp_io_get_netcdf_file_is_open(c_context,
                                                file_index);
     }
     else
@@ -932,7 +942,7 @@ bool mpp_io_c_get_regular_file_is_open_by_index(int const file_index)
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_get_regular_file_is_open(context,
+    return cmpp_io_get_regular_file_is_open(c_context,
                                             file_index);
 }
 
@@ -947,14 +957,14 @@ bool mpp_io_c_get_regular_file_is_open_by_name(char * const name)
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    file_index = cmpp_io_context_get_file_index(context,
+    file_index = cmpp_io_context_get_file_index(c_context,
                                                 name,
                                                 CMPP_ASCII,
                                                 &empty_index);
 
     if (file_index != CMPP_IO_INDEX_NOT_FOUND)
     {
-        return cmpp_io_get_regular_file_is_open(context,
+        return cmpp_io_get_regular_file_is_open(c_context,
                                                 file_index);
     }
     else
@@ -974,7 +984,7 @@ int mpp_io_c_get_file_index(char * const name,
     /*Catch OpenMP threads.*/
     trap_openmp_thread();
 
-    return cmpp_io_context_get_file_index(context,
+    return cmpp_io_context_get_file_index(c_context,
                                           name,
                                           type,
                                           &empty_index);

@@ -53,7 +53,7 @@ subroutine mpp_get_field_att_text_(context, &
 
     !Place the inputted netcdf variable name in a buffer that is
     !interoperable with c.
-    name_len = len(fieldname)
+    name_len = len_trim(fieldname)
     allocate(name_buf(name_len+1))
     do i = 1,name_len
         name_buf(i) = fieldname(i:i)
@@ -70,7 +70,7 @@ subroutine mpp_get_field_att_text_(context, &
 
     !Place the inputted netcdf attribute name in a buffer that is
     !interoperable with c.
-    name_len = len(attname)
+    name_len = len_trim(attname)
     allocate(name_buf(name_len+1))
     do i = 1,name_len
         name_buf(i) = attname(i:i)

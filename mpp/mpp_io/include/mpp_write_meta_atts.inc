@@ -25,7 +25,7 @@ subroutine mpp_write_meta_global(unit, &
     elseif (present(ival)) then
         num_vals = size(ival,kind=c_size_t)
     elseif (present(cval)) then
-        num_vals = len(cval,kind=c_size_t)
+        num_vals = len_trim(cval,kind=c_size_t)
     endif
 
     call mpp_write_attribute_metadata(context, &
@@ -114,7 +114,7 @@ subroutine mpp_write_meta_var(unit, &
     elseif (present(ival)) then
         num_vals = size(ival,kind=c_size_t)
     elseif (present(cval)) then
-        num_vals = len(cval,kind=c_size_t)
+        num_vals = len_trim(cval,kind=c_size_t)
     endif
 
     call mpp_write_attribute_metadata(context, &
@@ -300,7 +300,7 @@ subroutine mpp_write_attribute_metadata(context, &
         endif
 
         !Copy the name into an interoperable buffer and null terminate it.
-        buf_len = len(attribute_name)
+        buf_len = len_trim(attribute_name)
         allocate(name_buf(buf_len+1))
         do i = 1,buf_len
             name_buf(i) = attribute_name(i:i)
