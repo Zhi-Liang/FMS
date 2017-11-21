@@ -141,7 +141,8 @@ subroutine domain2d_check(context, &
                            //" null 2d domain.")
 
     elseif (context%files(file_index)%domain .ne. domain) then
-        call mpp_error(FATAL, &
+!       call mpp_error(FATAL, &
+        call mpp_error(WARNING, &
                        "domain2d_check: the inputted 2d domain does not" &
                            //" match the domain stored in the inputted" &
                            //" mpp_io context at the inputted file index.")

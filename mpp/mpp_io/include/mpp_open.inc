@@ -669,7 +669,9 @@ endif
                 context%files(file_index)%rank_list_root = pelist_root
                 deallocate(pelist)
             endif
-            context%files(file_index)%io_domain => mpp_get_io_domain(domain)
+!           context%files(file_index)%io_domain => mpp_get_io_domain(domain)
+            allocate(context%files(file_index)%io_domain)
+            context%files(file_index)%io_domain = mpp_get_io_domain(domain)
             io_domain_ptr => null()
 
         elseif (associated(io_domain_ug_ptr)) then
@@ -682,12 +684,21 @@ endif
                 call mpp_broadcast(file_index, &
                                    pelist_root, &
                                    pelist)
+
+                if (allocated(context%files(file_index)%rank_list)) then
+                    call mpp_error(WARNING,"code should never get here.")
+                    deallocate(context%files(file_index)%rank_list)
+                endif
+
+
                 allocate(context%files(file_index)%rank_list(pelist_size))
                 context%files(file_index)%rank_list = pelist
                 context%files(file_index)%rank_list_root = pelist_root
                 deallocate(pelist)
             endif
-            context%files(file_index)%io_domain_ug => mpp_get_UG_io_domain(domain_ug)
+!           context%files(file_index)%io_domain_ug => mpp_get_UG_io_domain(domain_ug)
+            allocate(context%files(file_index)%io_domain_ug)
+            context%files(file_index)%io_domain_ug = mpp_get_UG_io_domain(domain_ug)
             io_domain_ug_ptr => null()
 
         elseif (thread_flag .eq. MPP_SINGLE) then
@@ -705,10 +716,14 @@ endif
 
         !If present, store a pointer to the inputted domain.
         if (associated(domain_ptr)) then
-            context%files(file_index)%domain => domain
+!           context%files(file_index)%domain => domain
+            allocate(context%files(file_index)%domain)
+            context%files(file_index)%domain = domain
             domain_ptr => null()
         elseif(associated(domain_ug_ptr)) then
-            context%files(file_index)%domain_ug => domain_ug
+!           context%files(file_index)%domain_ug => domain_ug
+            allocate(context%files(file_index)%domain_ug)
+            context%files(file_index)%domain_ug = domain_ug
             domain_ug_ptr => null()
         endif
 

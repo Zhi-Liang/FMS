@@ -232,7 +232,7 @@ subroutine mpp_read_r_array(context, &
             unlim_dim_index = field%time_axis_index
             if (unlim_dim_index .eq. -1) then
                 corner_indices = 0
-                edge_lengths = var_data_sizes
+                edge_lengths(1:size(edge_lengths)) = var_data_sizes(1:size(edge_lengths))
             else
                 if (is_scalar) then
                     corner_indices = dim_level
