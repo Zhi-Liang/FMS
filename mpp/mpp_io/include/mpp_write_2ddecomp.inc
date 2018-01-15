@@ -100,7 +100,7 @@ subroutine mpp_write_2ddecomp_r2d_(context, &
     implicit none
 
     !Inputs/outputs
-    type(mpp_io_context_type),intent(inout) :: context
+    type(mpp_io_context_type),intent(inout),target :: context
     integer(kind=c_int),intent(in) :: file_index
     type(fieldtype),intent(in) :: field
     type(domain2d),target,intent(inout) :: domain
@@ -149,7 +149,7 @@ subroutine mpp_write_2ddecomp_r2d_(context, &
     call check_is_netcdf_file(context, &
                               file_index)
 
-    if (associated(context%files(file_index)%domain)) then
+    if (context%files(file_index)%domain .ne. NULL_DOMAIN2D) then
 
         !If there is a 2d domain stored in memory for the file, check that the
         !inputted domain matches the stored domain.
@@ -281,7 +281,7 @@ subroutine mpp_write_2ddecomp_r2d_(context, &
     halos_are_global = x_is_global .and. y_is_global
 
     if (context%files(file_index)%comm_required .or. &
-            associated(context%files(file_index)%io_domain)) then
+            context%files(file_index)%io_domain .ne. NULL_DOMAIN2D) then
 
         !Here, communication between ranks is necessary because either a
         !domain update is needed, or the writing rank must write data it
@@ -306,7 +306,7 @@ subroutine mpp_write_2ddecomp_r2d_(context, &
         else
             domain_ptr => null()
 
-            if (associated(context%files(file_index)%io_domain) .and. &
+            if (context%files(file_index)%io_domain .ne. NULL_DOMAIN2D .and. &
                     context%files(file_index)%data_in_multi_files) then
                 domain_ptr => context%files(file_index)%io_domain
             else
@@ -401,7 +401,7 @@ subroutine mpp_write_2ddecomp_r3d_(context, &
     implicit none
 
     !Inputs/outputs
-    type(mpp_io_context_type),intent(inout) :: context
+    type(mpp_io_context_type),intent(inout),target :: context
     integer(kind=c_int),intent(in) :: file_index
     type(fieldtype),intent(in) :: field
     type(domain2d),target,intent(inout) :: domain
@@ -450,7 +450,7 @@ subroutine mpp_write_2ddecomp_r3d_(context, &
     call check_is_netcdf_file(context, &
                               file_index)
 
-    if (associated(context%files(file_index)%domain)) then
+    if (context%files(file_index)%domain .ne. NULL_DOMAIN2D) then
 
         !If there is a 2d domain stored in memory for the file, check that the
         !inputted domain matches the stored domain.
@@ -582,7 +582,7 @@ subroutine mpp_write_2ddecomp_r3d_(context, &
     halos_are_global = x_is_global .and. y_is_global
 
     if (context%files(file_index)%comm_required .or. &
-            associated(context%files(file_index)%io_domain)) then
+            context%files(file_index)%io_domain .ne. NULL_DOMAIN2D) then
 
         !Here, communication between ranks is necessary because either a
         !domain update is needed, or the writing rank must write data it
@@ -607,7 +607,7 @@ subroutine mpp_write_2ddecomp_r3d_(context, &
         else
             domain_ptr => null()
 
-            if (associated(context%files(file_index)%io_domain) .and. &
+            if (context%files(file_index)%io_domain .ne. NULL_DOMAIN2D .and. &
                     context%files(file_index)%data_in_multi_files) then
                 domain_ptr => context%files(file_index)%io_domain
             else
@@ -702,7 +702,7 @@ subroutine mpp_write_2ddecomp_r4d_(context, &
     implicit none
 
     !Inputs/outputs
-    type(mpp_io_context_type),intent(inout) :: context
+    type(mpp_io_context_type),intent(inout),target :: context
     integer(kind=c_int),intent(in) :: file_index
     type(fieldtype),intent(in) :: field
     type(domain2d),target,intent(inout) :: domain
@@ -751,7 +751,7 @@ subroutine mpp_write_2ddecomp_r4d_(context, &
     call check_is_netcdf_file(context, &
                               file_index)
 
-    if (associated(context%files(file_index)%domain)) then
+    if (context%files(file_index)%domain .ne. NULL_DOMAIN2D) then
 
         !If there is a 2d domain stored in memory for the file, check that the
         !inputted domain matches the stored domain.
@@ -883,7 +883,7 @@ subroutine mpp_write_2ddecomp_r4d_(context, &
     halos_are_global = x_is_global .and. y_is_global
 
     if (context%files(file_index)%comm_required .or. &
-            associated(context%files(file_index)%io_domain)) then
+            context%files(file_index)%io_domain .ne. NULL_DOMAIN2D) then
 
         !Here, communication between ranks is necessary because either a
         !domain update is needed, or the writing rank must write data it
@@ -908,7 +908,7 @@ subroutine mpp_write_2ddecomp_r4d_(context, &
         else
             domain_ptr => null()
 
-            if (associated(context%files(file_index)%io_domain) .and. &
+            if (context%files(file_index)%io_domain .ne. NULL_DOMAIN2D .and. &
                     context%files(file_index)%data_in_multi_files) then
                 domain_ptr => context%files(file_index)%io_domain
             else

@@ -148,9 +148,7 @@ subroutine mpp_write_meta_axis_i1d_(context, &
 
     !Local variables
     integer(kind=c_int) :: f
-    integer(kind=c_int) :: name_len
     character(kind=c_char,len=1),dimension(:),allocatable :: name_buf
-    integer(kind=c_int) :: i
     integer(kind=c_int),dimension(1) :: dimension_index
     integer(kind=c_int) :: variable_index
     type(c_ptr) :: data_ptr
@@ -166,12 +164,8 @@ subroutine mpp_write_meta_axis_i1d_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the name in an interoperable buffer.
-        name_len = len_trim(dim_name)
-        allocate(name_buf(name_len+1))
-        do i = 1,name_len
-            name_buf(i) = dim_name(i:i)
-        enddo
-        name_buf(name_len+1) = c_null_char
+        call f_string_to_c(dim_name, &
+                           name_buf)
 
         !Write the dimension to the netcdf file.  Buffer the values.
         dimension_index(1) = mpp_io_c_write_netcdf_dimension(f, &
@@ -289,7 +283,6 @@ subroutine mpp_write_meta_axis_r1d_(context, &
 
     !Local variables
     integer(kind=c_int) :: f
-    integer(kind=c_int) :: name_len
     character(kind=c_char,len=1),dimension(:),allocatable :: name_buf
     integer(kind=c_int) :: i
     integer(kind=c_size_t) :: dimension_length
@@ -326,7 +319,7 @@ subroutine mpp_write_meta_axis_r1d_(context, &
         endif
 
         if (axis%cartesian .eq. "X" .or. axis%cartesian .eq. "Y") then
-            if (associated(context%files(file_index)%domain)) then
+            if (context%files(file_index)%domain .ne. NULL_DOMAIN2D) then
 
                 !Check that the inputted domain matches one of the
                 !components of the stored 2d structured domain.
@@ -384,12 +377,8 @@ subroutine mpp_write_meta_axis_r1d_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the dimension name in an interoperable buffer.
-        name_len = len_trim(dim_name)
-        allocate(name_buf(name_len+1))
-        do i = 1,name_len
-            name_buf(i) = dim_name(i:i)
-        enddo
-        name_buf(name_len+1) = c_null_char
+        call f_string_to_c(dim_name, &
+                           name_buf)
 
         !Determine the dimension length, and which data will be stored.
         if (present(dim_data)) then
@@ -397,7 +386,7 @@ subroutine mpp_write_meta_axis_r1d_(context, &
             if (context%files(file_index)%data_in_multi_files) then
                 if (present(domain)) then
 
-                    if (associated(context%files(file_index)%io_domain)) then
+                    if (context%files(file_index)%io_domain .ne. NULL_DOMAIN2D) then
 
                         !Get the starting and ending indices of the "global" part
                         !of the I/O domain associated with the inputted domain.
@@ -637,9 +626,7 @@ subroutine mpp_write_meta_axis_unlimited_(context, &
 
     !Local variables
     integer(kind=c_int) :: f
-    integer(kind=c_int) :: name_len
     character(kind=c_char,len=1),dimension(:),allocatable :: name_buf
-    integer(kind=c_int) :: i
     integer(kind=c_int),dimension(1) :: dimension_index
     integer(c_int) :: variable_index
     type(c_ptr) :: data_ptr
@@ -655,12 +642,8 @@ subroutine mpp_write_meta_axis_unlimited_(context, &
     if (context%files(file_index)%is_writer) then
 
         !Place the name in an interoperable buffer.
-        name_len = len_trim(dim_name)
-        allocate(name_buf(name_len+1))
-        do i = 1,name_len
-            name_buf(i) = dim_name(i:i)
-        enddo
-        name_buf(name_len+1) = c_null_char
+        call f_string_to_c(dim_name, &
+                           name_buf)
 
         !Write the dimension to the netcdf file.  Buffer the values.
         dimension_index(1) = mpp_io_c_write_netcdf_dimension(f, &

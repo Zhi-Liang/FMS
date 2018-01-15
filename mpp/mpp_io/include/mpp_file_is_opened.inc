@@ -54,8 +54,6 @@ function mpp_file_is_opened_a(file_name, &
     logical :: mpp_file_is_opened_a
 
     !Local variables
-    integer(kind=c_int) :: fname_length
-    integer(kind=c_int) :: i
     character(kind=c_char,len=1),dimension(:),allocatable :: c_fname
 
     !Make sure that the module has been initialized and that a valid
@@ -63,12 +61,8 @@ function mpp_file_is_opened_a(file_name, &
     call check_is_init()
 
     !Copy the file name into a buffer that is interoperable with c.
-    fname_length = len_trim(file_name)
-    allocate(c_fname(fname_length+1))
-    do i = 1,fname_length
-        c_fname(i) = file_name(i:i)
-    enddo
-    c_fname(fname_length+1) = c_null_char
+    call f_string_to_c(file_name, &
+                       c_fname)
 
     if (file_type .eq. MPP_NETCDF) then
         mpp_file_is_opened_a = mpp_io_c_get_netcdf_file_is_open(c_fname)

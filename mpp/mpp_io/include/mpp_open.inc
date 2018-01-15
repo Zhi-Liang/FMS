@@ -119,7 +119,7 @@ subroutine mpp_open_(context, &
         if (file_format .ne. MPP_ASCII .and. file_format .ne. MPP_NETCDF) then
             call mpp_error(FATAL, &
                            "mpp_open_: the only currently supported file" &
-                               //" formats are MPP_ASCII and MPP_NETCDF")
+                               //" formats are MPP_ASCII and MPP_NETCDF.")
         endif
         form_flag = file_format
     else
@@ -247,11 +247,8 @@ subroutine mpp_open_(context, &
         if (is_reader .or. is_writer) then
 
             !Copy the file name into a buffer that is interoperable with c.
-            allocate(c_fname(fname_length+1))
-            do i = 1,fname_length
-                c_fname(i) = file_name(i:i)
-            enddo
-            c_fname(fname_length+1) = c_null_char
+            call f_string_to_c(file_name, &
+                               c_fname)
 
             !Open the file.
             file_index_c = mpp_io_c_open_regular_file(c_fname, &
@@ -428,7 +425,7 @@ subroutine mpp_open_(context, &
 
         else
 
-            !Handle cases that independent of an I/O domain.
+            !Handle cases that are independent of an I/O domain.
 
             !Initialize flags.
             is_reader = .false._c_bool
@@ -613,12 +610,8 @@ subroutine mpp_open_(context, &
             endif
 
             !Copy the file name into a buffer that is interoperable with c.
-            fname_length = len_trim(fname_full)
-            allocate(c_fname(fname_length+1))
-            do i = 1,fname_length
-                c_fname(i) = fname_full(i:i)
-            enddo
-            c_fname(fname_length+1) = c_null_char
+            call f_string_to_c(fname_full, &
+                               c_fname)
 
             !Open the file.
             file_index_c = mpp_io_c_open_netcdf_file(c_fname, &
@@ -631,10 +624,12 @@ subroutine mpp_open_(context, &
                                                      MPP_IO_C_MAX_METADATA_BYTES_PER_FILE)
             deallocate(c_fname)
 
-if (mpp_pe() .eq. 0) then
-    write(6,*) "opened file "//trim(fname_full)//" as unit",file_index_c
-endif
-
+#ifdef RLMDEBUG
+            if (mpp_pe() .eq. 0) then
+                write(error_unit,*) "opened file "//trim(fname_full)//" as unit", &
+                                    file_index_c
+            endif
+#endif
 
             !Convert from valid c file index to fortran file index.
             file_index = convert_c_file_index(context, &
@@ -664,13 +659,19 @@ endif
                 call mpp_broadcast(file_index, &
                                    pelist_root, &
                                    pelist)
+
+#ifdef RLMDEBUG
+                if (allocated(context%files(file_index)%rank_list)) then
+                    call mpp_error(FATAL,
+                                   "code should never get here.")
+                endif
+#endif
+
                 allocate(context%files(file_index)%rank_list(pelist_size))
                 context%files(file_index)%rank_list = pelist
                 context%files(file_index)%rank_list_root = pelist_root
                 deallocate(pelist)
             endif
-!           context%files(file_index)%io_domain => mpp_get_io_domain(domain)
-            allocate(context%files(file_index)%io_domain)
             context%files(file_index)%io_domain = mpp_get_io_domain(domain)
             io_domain_ptr => null()
 
@@ -685,19 +686,18 @@ endif
                                    pelist_root, &
                                    pelist)
 
+#ifndef RLMDEBUG
                 if (allocated(context%files(file_index)%rank_list)) then
-                    call mpp_error(WARNING,"code should never get here.")
-                    deallocate(context%files(file_index)%rank_list)
+                    call mpp_error(FATAL, &
+                                   "code should never get here.")
                 endif
-
+#endif
 
                 allocate(context%files(file_index)%rank_list(pelist_size))
                 context%files(file_index)%rank_list = pelist
                 context%files(file_index)%rank_list_root = pelist_root
                 deallocate(pelist)
             endif
-!           context%files(file_index)%io_domain_ug => mpp_get_UG_io_domain(domain_ug)
-            allocate(context%files(file_index)%io_domain_ug)
             context%files(file_index)%io_domain_ug = mpp_get_UG_io_domain(domain_ug)
             io_domain_ug_ptr => null()
 
@@ -714,15 +714,11 @@ endif
 
         endif
 
-        !If present, store a pointer to the inputted domain.
+        !If present, store a copy of the input domain.
         if (associated(domain_ptr)) then
-!           context%files(file_index)%domain => domain
-            allocate(context%files(file_index)%domain)
             context%files(file_index)%domain = domain
             domain_ptr => null()
         elseif(associated(domain_ug_ptr)) then
-!           context%files(file_index)%domain_ug => domain_ug
-            allocate(context%files(file_index)%domain_ug)
             context%files(file_index)%domain_ug = domain_ug
             domain_ug_ptr => null()
         endif

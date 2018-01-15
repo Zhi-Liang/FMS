@@ -420,10 +420,10 @@ module mpp_io_mod
         integer(kind=c_int) :: file_type
         integer(kind=c_int),dimension(:),allocatable :: rank_list
         integer(kind=c_int) :: rank_list_root
-        type(domain2D),pointer :: domain
-        type(domain2D),pointer :: io_domain
-        type(domainUG),pointer :: domain_UG
-        type(domainUG),pointer :: io_domain_UG
+        type(domain2D) :: domain
+        type(domain2D) :: io_domain
+        type(domainUG) :: domain_UG
+        type(domainUG) :: io_domain_UG
         logical(kind=c_bool) :: is_writer
         logical(kind=c_bool) :: is_reader
         logical(kind=c_bool) :: data_in_multi_files

@@ -148,7 +148,7 @@ subroutine mpp_io_unstructured_read_array(context, &
     real(kind=c_double),dimension(:),allocatable :: buf
 
     !Make sure that the module has been initialized, that a valid
-    !file index was passed in, and that the inputted file is a netcdf file.
+    !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
     f = check_file_index(context, &
                          file_index)

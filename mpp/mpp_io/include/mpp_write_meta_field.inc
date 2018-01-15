@@ -96,7 +96,6 @@ subroutine mpp_write_meta_field_(context, &
 
     !Local variables
     integer(kind=c_int) :: f
-    integer(kind=c_int) :: name_len
     character(kind=c_char,len=1),dimension(:),allocatable :: name_buf
     integer(kind=c_int) :: i
     logical(kind=c_bool) :: found_unlimited_dimension
@@ -116,7 +115,7 @@ subroutine mpp_write_meta_field_(context, &
     integer(kind=c_int) :: num_axes
 
     !Make sure that the module has been initialized, that a valid
-    !file index was passed in, and that the inputted file is a netcdf file.
+    !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
     f = check_file_index(context, &
                          file_index)
@@ -131,11 +130,11 @@ subroutine mpp_write_meta_field_(context, &
 
     if (.not. context%files(file_index)%is_writer) then
         if (allocated(field%axes)) then
-                call mpp_error(WARNING, &
-                               "mpp_write_meta_field_: the current field has" &
-                                   //" already had its metadata defined.  It is" &
-                                   //" being overwritten.")
-                deallocate(field%axes)
+            call mpp_error(WARNING, &
+                           "mpp_write_meta_field_: the current field has" &
+                               //" already had its metadata defined.  It is" &
+                               //" being overwritten.")
+            deallocate(field%axes)
         endif
         allocate(field%axes(2))
     endif
@@ -150,7 +149,7 @@ subroutine mpp_write_meta_field_(context, &
                 endif
             else
                 call mpp_error(FATAL, &
-                               "mpp_write_meta_field_: the inputted" &
+                               "mpp_write_meta_field_: the input" &
                                    //" axes array contains more than one" &
                                    //" x axis.")
             endif
@@ -163,7 +162,7 @@ subroutine mpp_write_meta_field_(context, &
                 endif
             else
                 call mpp_error(FATAL, &
-                               "mpp_write_meta_field_: the inputted" &
+                               "mpp_write_meta_field_: the input" &
                                    //" axes array contains more than one" &
                                    //" y axis.")
             endif
@@ -195,12 +194,8 @@ subroutine mpp_write_meta_field_(context, &
         endif
 
         !Place the name in an interoperable buffer.
-        name_len = len_trim(var_name)
-        allocate(name_buf(name_len+1))
-        do i = 1,name_len
-            name_buf(i) = var_name(i:i)
-        enddo
-        name_buf(name_len+1) = c_null_char
+        call f_string_to_c(var_name, &
+                           name_buf)
 
         !Fill an array with dimension indices that where stored when the metadata
         !for each dimension was defined.  Make sure that only one unlimited
@@ -211,11 +206,11 @@ subroutine mpp_write_meta_field_(context, &
         num_axes = size(axes)
         allocate(axis_id(num_axes))
         if (allocated(field%axes)) then
-                call mpp_error(WARNING, &
-                               "mpp_write_meta_field_: the current field has" &
-                                   //" already had its metadata defined.  It is" &
-                                   //" being overwritten.")
-                deallocate(field%axes)
+            call mpp_error(WARNING, &
+                           "mpp_write_meta_field_: the current field has" &
+                               //" already had its metadata defined.  It is" &
+                               //" being overwritten.")
+            deallocate(field%axes)
         endif
         allocate(field%axes(num_axes))
         do i = 1,num_axes

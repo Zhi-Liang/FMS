@@ -69,7 +69,7 @@ subroutine mpp_io_init(flags, &
     if (io_status .gt. 0) then
         call mpp_error(FATAL, &
                        "mpp_io_init: an error occurred while reading the" &
-                           //" mpp_io namelist from the input.nml file")
+                           //" mpp_io namelist from the input.nml file.")
     endif
 
     !Write the mpp_io namelist to stdout and the logfile.

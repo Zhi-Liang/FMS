@@ -37,7 +37,7 @@ subroutine mpp_get_axes_(context, &
     integer(kind=c_int) :: dim_index
 
     !Make sure that the module has been initialized, that a valid
-    !file index was passed in, and that the inputted file is a netcdf file.
+    !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
     f = check_file_index(context, &
                          file_index)
@@ -52,11 +52,11 @@ subroutine mpp_get_axes_(context, &
 
     if (allocated(context%files(file_index)%dim_indices)) then
 
-        !Make sure that the inputted array is the correct size.
+        !Make sure that the input array is the correct size.
         num_dims = size(context%files(file_index)%dim_indices)
         if (size(axes) .lt. num_dims) then
             call mpp_error(FATAL, &
-                           "mpp_get_axes_: the size of the inputted" &
+                           "mpp_get_axes_: the size of the input" &
                                //" axes array must be at least as large" &
                                //" as the number of dimensions in the" &
                                //" netcdf file.")

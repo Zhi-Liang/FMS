@@ -90,7 +90,7 @@ subroutine mpp_read_2ddecomp_r2d_(context, &
     implicit none
 
     !Inputs/outputs
-    type(mpp_io_context_type),intent(inout) :: context
+    type(mpp_io_context_type),intent(inout),target :: context
     integer(kind=c_int),intent(in) :: file_index
     type(fieldtype),intent(in) :: field
     type(domain2D),intent(in) :: domain
@@ -341,9 +341,8 @@ subroutine mpp_read_2ddecomp_r2d_(context, &
         edge_lengths(1) = xe - xs + 1
         edge_lengths(2) = ye - ys + 1
 
-!       io_domain => mpp_get_io_domain(domain)
         io_domain => context%files(file_index)%io_domain
-        if (associated(io_domain)) then
+        if (io_domain .ne. NULL_DOMAIN2D) then
             call mpp_get_compute_domain(io_domain, &
                                         xs, &
                                         xe, &
@@ -419,7 +418,7 @@ subroutine mpp_read_2ddecomp_r3d_(context, &
     implicit none
 
     !Inputs/outputs
-    type(mpp_io_context_type),intent(inout) :: context
+    type(mpp_io_context_type),intent(inout),target :: context
     integer(kind=c_int),intent(in) :: file_index
     type(fieldtype),intent(in) :: field
     type(domain2D),intent(in) :: domain
@@ -673,9 +672,8 @@ subroutine mpp_read_2ddecomp_r3d_(context, &
         edge_lengths(1) = xe - xs + 1
         edge_lengths(2) = ye - ys + 1
 
-!       io_domain => mpp_get_io_domain(domain)
         io_domain => context%files(file_index)%io_domain
-        if (associated(io_domain)) then
+        if (io_domain .ne. NULL_DOMAIN2D) then
             call mpp_get_compute_domain(io_domain, &
                                         xs, &
                                         xe, &
@@ -751,7 +749,7 @@ subroutine mpp_read_2ddecomp_r4d_(context, &
     implicit none
 
     !Inputs/outputs
-    type(mpp_io_context_type),intent(inout) :: context
+    type(mpp_io_context_type),intent(inout),target :: context
     integer(kind=c_int),intent(in) :: file_index
     type(fieldtype),intent(in) :: field
     type(domain2D),intent(in) :: domain
@@ -1008,9 +1006,8 @@ subroutine mpp_read_2ddecomp_r4d_(context, &
         edge_lengths(1) = xe - xs + 1
         edge_lengths(2) = ye - ys + 1
 
-!       io_domain => mpp_get_io_domain(domain)
         io_domain => context%files(file_index)%io_domain
-        if (associated(io_domain)) then
+        if (io_domain .ne. NULL_DOMAIN2D) then
             call mpp_get_compute_domain(io_domain, &
                                         xs, &
                                         xe, &

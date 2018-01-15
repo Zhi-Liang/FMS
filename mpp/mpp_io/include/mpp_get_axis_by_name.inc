@@ -1,5 +1,6 @@
 function mpp_get_axis_by_name(unit, &
-                              axisname) result(axis)
+                              axisname) &
+    result(axis)
     implicit none
 
     !Inputs/outputs
@@ -16,7 +17,8 @@ end function mpp_get_axis_by_name
 
 function mpp_get_axis_by_name_(context, &
                                file_index, &
-                               axisname) result(out_axis)
+                               axisname) &
+    result(out_axis)
     implicit none
 
     !Inputs/outputs
@@ -27,14 +29,12 @@ function mpp_get_axis_by_name_(context, &
 
     !Local variables
     integer(kind=c_int) :: f
-    integer(kind=c_int) :: name_len
     character(kind=c_char,len=1),dimension(:),allocatable,target :: name_buf
-    integer(kind=c_int) :: i
     type(c_ptr) :: ptr
     integer(kind=c_int) :: dim_index
 
     !Make sure that the module has been initialized, that a valid
-    !file index was passed in, and that the inputted file is a netcdf file.
+    !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
     f = check_file_index(context, &
                          file_index)
@@ -45,12 +45,8 @@ function mpp_get_axis_by_name_(context, &
     out_axis = default_axis
 
     !Copy the dimension name into a buffer that is interoperable with c.
-    name_len = len_trim(axisname)
-    allocate(name_buf(name_len+1))
-    do i = 1,name_len
-        name_buf(i) = axisname(i:i)
-    enddo
-    name_buf(name_len+1) = c_null_char
+    call f_string_to_c(axisname, &
+                       name_buf)
     ptr = c_null_ptr
     ptr = c_loc(name_buf)
 
