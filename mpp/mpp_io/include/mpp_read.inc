@@ -173,7 +173,7 @@ subroutine mpp_read_r_array(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
@@ -330,7 +330,7 @@ subroutine mpp_read_text_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)

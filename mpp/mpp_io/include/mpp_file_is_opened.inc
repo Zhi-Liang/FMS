@@ -26,7 +26,7 @@ function mpp_file_is_opened_i_(context, &
     !Make sure that the module has been initialized and that a valid
     !file index was passed in.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
 
     if (context%files(file_index)%is_reader .or. &

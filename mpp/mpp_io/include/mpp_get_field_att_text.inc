@@ -35,9 +35,7 @@ subroutine mpp_get_field_att_text_(context, &
 
     !Local variables
     integer(kind=c_int) :: f
-    integer(kind=c_int) :: name_len
     character(kind=c_char,len=1),dimension(:),allocatable,target :: name_buf
-    integer(kind=c_int) :: i
     type(c_ptr) :: ptr
     integer(kind=c_int) :: var_index
     integer(kind=c_int) :: att_index
@@ -46,19 +44,15 @@ subroutine mpp_get_field_att_text_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
 
     !Place the inputted netcdf variable name in a buffer that is
     !interoperable with c.
-    name_len = len_trim(fieldname)
-    allocate(name_buf(name_len+1))
-    do i = 1,name_len
-        name_buf(i) = fieldname(i:i)
-    enddo
-    name_buf(name_len+1) = c_null_char
+    call f_string_to_c(fieldname, &
+                       name_buf)
     ptr = c_null_ptr
     ptr = c_loc(name_buf)
 
@@ -70,13 +64,8 @@ subroutine mpp_get_field_att_text_(context, &
 
     !Place the inputted netcdf attribute name in a buffer that is
     !interoperable with c.
-    name_len = len_trim(attname)
-    allocate(name_buf(name_len+1))
-    do i = 1,name_len
-        name_buf(i) = attname(i:i)
-    enddo
-    name_buf(name_len+1) = c_null_char
-    ptr = c_null_ptr
+    call f_string_to_c(attname, &
+                       name_buf)
     ptr = c_loc(name_buf)
 
     !Get the index of the attribute.

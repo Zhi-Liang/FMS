@@ -166,7 +166,7 @@ subroutine mpp_write_r_array(context, &
     integer(kind=c_int) :: i
     integer(kind=c_int) :: num_axes
 
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
 
     !Get necessary quantities.

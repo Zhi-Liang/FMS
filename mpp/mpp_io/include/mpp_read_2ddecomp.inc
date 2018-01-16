@@ -99,7 +99,6 @@ subroutine mpp_read_2ddecomp_r2d_(context, &
     integer(kind=c_int),intent(in),optional :: tile_count
 
     !Local variables
-    integer(kind=c_int) :: f
     integer(kind=c_int) :: is
     integer(kind=c_int) :: ie
     integer(kind=c_int) :: js
@@ -143,8 +142,8 @@ subroutine mpp_read_2ddecomp_r2d_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
     call domain2d_check(context, &
@@ -427,7 +426,6 @@ subroutine mpp_read_2ddecomp_r3d_(context, &
     integer(kind=c_int),intent(in),optional :: tile_count
 
     !Local variables
-    integer(kind=c_int) :: f
     integer(kind=c_int) :: is
     integer(kind=c_int) :: ie
     integer(kind=c_int) :: js
@@ -472,8 +470,8 @@ subroutine mpp_read_2ddecomp_r3d_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
     call domain2d_check(context, &
@@ -758,7 +756,6 @@ subroutine mpp_read_2ddecomp_r4d_(context, &
     integer(kind=c_int),intent(in),optional :: tile_count
 
     !Local variables
-    integer(kind=c_int) :: f
     integer(kind=c_int) :: is
     integer(kind=c_int) :: ie
     integer(kind=c_int) :: js
@@ -804,8 +801,8 @@ subroutine mpp_read_2ddecomp_r4d_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
     call domain2d_check(context, &

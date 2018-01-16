@@ -162,7 +162,6 @@ subroutine mpp_write_unstructured_array(context, &
     real(kind=c_double),intent(in),optional :: default_data
 
     !Local variables
-    integer(kind=c_int) :: f
     type(domainUG),pointer :: io_domain_ptr
     real(kind=c_double) :: fill
     integer(kind=c_int) :: num_ranks
@@ -184,8 +183,8 @@ subroutine mpp_write_unstructured_array(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
     call domainUG_check(context, &

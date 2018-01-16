@@ -1,18 +1,13 @@
 !Initialize a mpp_io context.
 subroutine mpp_io_context_init(context, &
-                               num_netcdf_files, &
-                               num_regular_files, &
-                               num_hdf5_files)
+                               num_files)
     implicit none
 
     !Inputs/Outputs.
     type(mpp_io_context_type),intent(inout) :: context
-    integer(kind=c_int),intent(in) :: num_netcdf_files
-    integer(kind=c_int),intent(in) :: num_regular_files
-    integer(kind=c_int),intent(in) :: num_hdf5_files
+    integer(kind=c_int),intent(in) :: num_files
 
     !Local variables
-    integer(kind=c_int) :: num_files
     integer(kind=c_int) :: i
 
     if (allocated(context%files)) then
@@ -21,7 +16,6 @@ subroutine mpp_io_context_init(context, &
                            //" already been initialized.")
     endif
 
-    num_files = num_netcdf_files + num_regular_files + num_hdf5_files
     if (num_files .le. 0 .or. num_files .gt. MPP_IO_MAX_NUM_FILES) then
         call mpp_error(FATAL, &
                        "mpp_io_context_init: the inputted number of files" &
@@ -32,9 +26,7 @@ subroutine mpp_io_context_init(context, &
     do i = 1,num_files
         call parallel_io_type_reset(context%files(i))
     enddo
-    context%num_netcdf_files = num_netcdf_files
-    context%num_regular_files = num_regular_files
-    context%num_hdf5_files = num_hdf5_files
+    context%cur_num_files = 0
 
 end subroutine mpp_io_context_init
 
@@ -72,6 +64,8 @@ subroutine parallel_io_type_reset(var)
     integer(kind=c_int) :: i
 
     !Set initial values.
+    var%in_use = .false._c_bool
+    var%c_file_index = -1
     var%file_type = -1
     if (allocated(var%rank_list)) then
         deallocate(var%rank_list)

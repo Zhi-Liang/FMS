@@ -516,23 +516,25 @@ int cmpp_io_context_add_file(cmpp_io_context_t * const * const self,
                                                 file_type,
                                                 &empty_index);
 
-/*
-    Per Zhi's decision.  Almost certainly going to lead to memory leaks.
-
+#ifdef NOLEGACY
     error_check(file_index == CMPP_IO_INDEX_NOT_FOUND,
                 "the file %s already exists for the inputted context."
                     "  This means the file has most likely already been"
                     " opened.",
                 file_name);
     file_name = NULL;
-*/
+#else
+    /*Per Zhi's decision.  Almost certainly going to lead to memory leaks
+      or crashes.*/
     if (file_index != CMPP_IO_INDEX_NOT_FOUND)
     {
-        warn("the file %s was already opened. Opening"
-                 " it again will leak memory unless the file"
-                 " is closed once for each time that it was opened.",
+        warn("the file %s was already opened.  To match legacy behavior,"
+                 " another file separate file structure will be allocated."
+                 "  This will almost certainly cause a memory leak, unless"
+                 " all individual file structures are freed.",
              file_name);
     }
+#endif
 
     if (empty_index == CMPP_IO_INDEX_NOT_FOUND)
     {

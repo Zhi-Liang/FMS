@@ -86,7 +86,7 @@ subroutine mpp_def_dim_nodata_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
@@ -135,7 +135,7 @@ subroutine mpp_def_dim_int_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
@@ -217,7 +217,7 @@ subroutine mpp_def_dim_real_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)

@@ -24,13 +24,15 @@ subroutine mpp_flush_(context, &
     !Make sure that the module has been initialized and that a valid
     !file index was passed in.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
 
-    if (context%files(file_index)%file_type .eq. MPP_NETCDF) then
-        call mpp_io_c_flush_netcdf_file(f)
-    else
-        call mpp_io_c_flush_regular_file(f)
+    if (context%files(file_index)%is_writer) then
+        if (context%files(file_index)%file_type .eq. MPP_NETCDF) then
+            call mpp_io_c_flush_netcdf_file(f)
+        else
+            call mpp_io_c_flush_regular_file(f)
+        endif
     endif
 
 end subroutine mpp_flush_

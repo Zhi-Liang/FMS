@@ -36,7 +36,7 @@ subroutine mpp_get_fields_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
@@ -55,7 +55,7 @@ subroutine mpp_get_fields_(context, &
         do i = 1,tot_num_vars
             var_index = context%files(file_index)%vars(i)%var_index
             ptr = mpp_io_c_get_netcdf_variable_name(f, &
-                                                  var_index)
+                                                    var_index)
             dim_index = mpp_io_c_get_netcdf_dimension_index(f, &
                                                             ptr)
             ptr = c_null_ptr
@@ -63,7 +63,7 @@ subroutine mpp_get_fields_(context, &
                 var_counter = var_counter + 1
                 if (var_counter .gt. input_array_size) then
                     call mpp_error(FATAL, &
-                                   "mpp_get_fields: inputted fields array" &
+                                   "mpp_get_fields: input fields array" &
                                        //" is too small.")
                 endif
                 call fill_fieldtype_from_index(context, &

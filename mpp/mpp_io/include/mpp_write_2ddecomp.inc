@@ -110,7 +110,6 @@ subroutine mpp_write_2ddecomp_r2d_(context, &
     real(kind=c_double),intent(in),optional :: default_data
 
     !Local variables
-    integer(kind=c_int) :: f
     integer(kind=c_int) :: dposition
     integer(kind=c_int) :: is
     integer(kind=c_int) :: ie
@@ -144,8 +143,8 @@ subroutine mpp_write_2ddecomp_r2d_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
 
@@ -411,7 +410,6 @@ subroutine mpp_write_2ddecomp_r3d_(context, &
     real(kind=c_double),intent(in),optional :: default_data
 
     !Local variables
-    integer(kind=c_int) :: f
     integer(kind=c_int) :: dposition
     integer(kind=c_int) :: is
     integer(kind=c_int) :: ie
@@ -445,8 +443,8 @@ subroutine mpp_write_2ddecomp_r3d_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
 
@@ -712,7 +710,6 @@ subroutine mpp_write_2ddecomp_r4d_(context, &
     real(kind=c_double),intent(in),optional :: default_data
 
     !Local variables
-    integer(kind=c_int) :: f
     integer(kind=c_int) :: dposition
     integer(kind=c_int) :: is
     integer(kind=c_int) :: ie
@@ -746,8 +743,8 @@ subroutine mpp_write_2ddecomp_r4d_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
 

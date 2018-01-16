@@ -35,70 +35,47 @@ subroutine check_is_init()
 
 end subroutine check_is_init
 
-!Make sure that an input file index is inside the files array of a context,
-!in order to avoid segmentation faults.
-function check_file_index(context, &
-                          file_index) &
-    result(file_index_out)
+!Make sure that an input file index is inside the files array of a context.
+subroutine check_file_index(context, &
+                            file_index)
     implicit none
 
     !Inputs/outputs
     type(mpp_io_context_type),intent(in) :: context
     integer(kind=c_int),intent(in) :: file_index
-    integer(kind=c_int) :: file_index_out
 
-    !Local variables
-    integer(kind=c_int) :: lb1
-    integer(kind=c_int) :: lb2
-    integer(kind=c_int) :: lb3
-
-    lb1 = context%num_netcdf_files
-    lb2 = lb1 + context%num_regular_files
-    lb3 = lb2 + context%num_hdf5_files
-
-    if (file_index .ge. 1 .and. file_index .le. lb1) then
-        file_index_out = file_index - 1
-    elseif (file_index .gt. lb1 .and. file_index .le. lb2) then
-        file_index_out = file_index - lb1 - 1
-    elseif (file_index .gt. lb2 .and. file_index .le. lb3) then
-        file_index_out = file_index - lb2 - 1
-    else
+    if (file_index .lt. 1 .or. file_index .gt. context%cur_num_files) then
         call mpp_error(FATAL, &
                        "check_file_index: the input file index must" &
-                           //" be >= 0 and < the maximum number of files" &
-                           //" allowed in the input mpp_io context.")
+                           //" be >= 1 and <= the current number of open" &
+                           //" files in the input mpp_io context.")
     endif
 
-end function check_file_index
+end subroutine check_file_index
 
-!Convert from a file index returned from c to one needed by fortran.
-function convert_c_file_index(context, &
-                              file_type, &
-                              file_index_in) &
-    result(file_index_out)
+!Return the value of the corresponding file index required by c.
+function get_c_file_index(context, &
+                          file_index) &
+    result(c_file_index)
     implicit none
 
     !Inputs/outputs
     type(mpp_io_context_type),intent(in) :: context
-    integer(kind=c_int),intent(in) :: file_type
-    integer(kind=c_int),intent(in) :: file_index_in
-    integer(kind=c_int) :: file_index_out
+    integer(kind=c_int),intent(in) :: file_index
+    integer(kind=c_int) :: c_file_index
 
-    if (file_type .eq. MPP_NETCDF) then
-        file_index_out = file_index_in + 1
-    elseif (file_type .eq. MPP_ASCII) then
-        file_index_out = file_index_in + 1 + context%num_netcdf_files
-    elseif (file_type .eq. MPP_HDF5) then
-        file_index_out = file_index_in + 1 + context%num_netcdf_files + &
-                         context%num_regular_files
-    else
+    call check_file_index(context, &
+                          file_index)
+    c_file_index = context%files(file_index)%c_file_index
+    if (c_file_index .eq. -1 .and. (context%files(file_index)%is_reader &
+            .or. context%files(file_index)%is_writer)) then
         call mpp_error(FATAL, &
-                       "convert_c_file_index: the input file type must" &
-                           //" be either MPP_NETCDF, MPP_ASCII, or" &
-                           //" MPP_HDF5.")
+                       "get_c_file_index: the current rank is not allowed" &
+                           //" to read from/write to a file unless it has" &
+                           //" opened the file.")
     endif
 
-end function convert_c_file_index
+end function get_c_file_index
 
 !Make sure that the file associated with an input file index is a netcdf
 !file.
@@ -266,7 +243,7 @@ subroutine prepare_write_r8(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
@@ -291,7 +268,11 @@ subroutine prepare_write_r8(context, &
         !As a precaution, trap when tstamp is passed in, but the variable
         !does not depend on an unlimited dimension.
         if (present(tstamp)) then
+#ifdef NOLEGACY
             call mpp_error(FATAL, &
+#else
+            call mpp_error(WARNING, &
+#endif
                            "a time stamp was passed in, but the input" &
                                //" field does not have an unlimited axis.")
         endif
@@ -410,7 +391,7 @@ subroutine fill_atttype_from_index(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
@@ -555,7 +536,7 @@ subroutine fill_axistype_from_index(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
@@ -919,7 +900,7 @@ subroutine fill_fieldtype_from_index(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)

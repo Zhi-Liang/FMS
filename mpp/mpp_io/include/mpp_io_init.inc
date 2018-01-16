@@ -118,9 +118,8 @@ subroutine mpp_io_init(flags, &
     !Initialize the context for the mpp_io module.  Currently, only one
     !context is defined.  This can be extended in the future.
     call mpp_io_context_init(context, &
-                             max_num_netcdf_files, &
-                             max_num_regular_files, &
-                             max_num_hdf5_files)
+                             max_num_netcdf_files + max_num_regular_files &
+                                 + max_num_hdf5_files)
 
     !Set the module state as initialized.
     module_is_initialized = .true._c_bool

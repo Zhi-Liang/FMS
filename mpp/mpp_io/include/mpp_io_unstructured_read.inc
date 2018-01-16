@@ -138,7 +138,6 @@ subroutine mpp_io_unstructured_read_array(context, &
     integer(kind=c_int),intent(in),optional :: threading
 
     !Local variables
-    integer(kind=c_int) :: f
     integer(kind=c_int) :: total_data_size
     integer(kind=c_int) :: i
     logical(kind=c_bool) :: all_read
@@ -150,8 +149,8 @@ subroutine mpp_io_unstructured_read_array(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the input file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
     call domainUG_check(context, &

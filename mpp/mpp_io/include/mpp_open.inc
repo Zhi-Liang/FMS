@@ -70,7 +70,6 @@ subroutine mpp_open_(context, &
     type(domainUG),intent(in),target,optional :: domain_ug
 
     !Local variables
-    integer(kind=c_int) :: file_index_c
     integer(kind=c_int) :: action_flag
     integer(kind=c_int) :: form_flag
     integer(kind=c_int) :: thread_flag
@@ -94,7 +93,6 @@ subroutine mpp_open_(context, &
     character(len=MPP_IO_MAX_FILENAME_LEN) :: fname_full_buffer
     character(len=MPP_IO_MAX_FILENAME_LEN) :: fname_full_buffer2
     logical :: fexists
-    integer(kind=c_int),dimension(:),allocatable :: pelist
     logical(kind=c_bool) :: data_in_multi_files
     logical(kind=c_bool) :: comm_required
     logical(kind=c_bool) :: is_io_domain_tile_root
@@ -165,6 +163,26 @@ subroutine mpp_open_(context, &
                        "mpp_open_: the inputted filename (" &
                            //trim(file_name)//") is too long.")
     endif
+
+    !Get an index in the context's files array where the data about the file
+    !will be stored.
+    file_index = 0
+    do i = 1,context%cur_num_files
+        if (.not. context%files(i)%in_use) then
+            file_index = i
+            exit
+        endif
+    enddo
+    if (file_index .eq. 0) then
+        context%cur_num_files = context%cur_num_files + 1
+        if (context%cur_num_files .gt. size(context%files)) then
+            call mpp_error(FATAL, &
+                           "mpp_open_: the number of open files exceeds" &
+                               //" the maximum number allowed.")
+        endif
+        file_index = context%cur_num_files
+    endif
+    context%files(file_index)%in_use = .true._c_bool
 
     if (form_flag .eq. MPP_ASCII) then
 
@@ -251,38 +269,9 @@ subroutine mpp_open_(context, &
                                c_fname)
 
             !Open the file.
-            file_index_c = mpp_io_c_open_regular_file(c_fname, &
-                                                      action_flag)
+            context%files(file_index)%c_file_index = mpp_io_c_open_regular_file(c_fname, &
+                                                                                action_flag)
             deallocate(c_fname)
-
-            !Convert from valid c file index to fortran file index.
-            file_index = convert_c_file_index(context, &
-                                              MPP_ASCII, &
-                                              file_index_c)
-
-            !Prevent segmentation faults.
-            if (file_index .lt. 1 .or. file_index .gt. &
-                    size(context%files)) then
-                call mpp_error(FATAL, &
-                               "mpp_open_: the number of open files exceeds" &
-                                   //" the maximum number allowed.")
-            endif
-        endif
-
-        if (comm_required) then
-
-            !Broadcast the file index to all the non-reading and/or non-writing
-            !ranks.
-            call mpp_broadcast(file_index, &
-                               pelist_root)
-        endif
-
-        !Make sure that the the current pelist for the file in the context
-        !has not already been set.
-        if (allocated(context%files(file_index)%rank_list)) then
-            call mpp_error(FATAL, &
-                           "mpp_open_: file index is already currently in" &
-                               //" use.")
         endif
 
         if (comm_required) then
@@ -614,35 +603,23 @@ subroutine mpp_open_(context, &
                                c_fname)
 
             !Open the file.
-            file_index_c = mpp_io_c_open_netcdf_file(c_fname, &
-                                                     action_flag, &
-                                                     MPP_IO_C_MAX_GLOBAL_ATTS_PER_FILE, &
-                                                     MPP_IO_C_MAX_DIMS_PER_FILE, &
-                                                     MPP_IO_C_MAX_VARS_PER_FILE, &
-                                                     MPP_IO_C_MAX_ATTS_PER_VAR, &
-                                                     MPP_IO_C_MAX_DIMS_PER_VAR, &
-                                                     MPP_IO_C_MAX_METADATA_BYTES_PER_FILE)
+            context%files(file_index)%c_file_index = mpp_io_c_open_netcdf_file(c_fname, &
+                                                                               action_flag, &
+                                                                               MPP_IO_C_MAX_GLOBAL_ATTS_PER_FILE, &
+                                                                               MPP_IO_C_MAX_DIMS_PER_FILE, &
+                                                                               MPP_IO_C_MAX_VARS_PER_FILE, &
+                                                                               MPP_IO_C_MAX_ATTS_PER_VAR, &
+                                                                               MPP_IO_C_MAX_DIMS_PER_VAR, &
+                                                                               MPP_IO_C_MAX_METADATA_BYTES_PER_FILE)
             deallocate(c_fname)
 
 #ifdef RLMDEBUG
             if (mpp_pe() .eq. 0) then
                 write(error_unit,*) "opened file "//trim(fname_full)//" as unit", &
-                                    file_index_c
+                                    context%files(file_index)%c_file_index
             endif
 #endif
 
-            !Convert from valid c file index to fortran file index.
-            file_index = convert_c_file_index(context, &
-                                              MPP_NETCDF, &
-                                              file_index_c)
-
-            !Prevent segmentation faults.
-            if (file_index .lt. 1 .or. file_index .gt. &
-                    size(context%files)) then
-                call mpp_error(FATAL, &
-                               "mpp_open_: the number of open files exceeds" &
-                                   //" the maximum number allowed.")
-            endif
         endif
 
         !If communication is necessary (cases 1, 2, and 6 above), then
@@ -653,24 +630,10 @@ subroutine mpp_open_(context, &
 
             if (comm_required) then
                 pelist_size = mpp_get_domain_npes(io_domain_ptr)
-                allocate(pelist(pelist_size))
-                call mpp_get_pelist(io_domain_ptr, &
-                                    pelist)
-                call mpp_broadcast(file_index, &
-                                   pelist_root, &
-                                   pelist)
-
-#ifdef RLMDEBUG
-                if (allocated(context%files(file_index)%rank_list)) then
-                    call mpp_error(FATAL,
-                                   "code should never get here.")
-                endif
-#endif
-
                 allocate(context%files(file_index)%rank_list(pelist_size))
-                context%files(file_index)%rank_list = pelist
+                call mpp_get_pelist(io_domain_ptr, &
+                                    context%files(file_index)%rank_list)
                 context%files(file_index)%rank_list_root = pelist_root
-                deallocate(pelist)
             endif
             context%files(file_index)%io_domain = mpp_get_io_domain(domain)
             io_domain_ptr => null()
@@ -679,24 +642,10 @@ subroutine mpp_open_(context, &
 
             if (comm_required) then
                 pelist_size = mpp_get_UG_domain_npes(io_domain_ug_ptr)
-                allocate(pelist(pelist_size))
-                call mpp_get_UG_domain_pelist(io_domain_ug_ptr, &
-                                              pelist)
-                call mpp_broadcast(file_index, &
-                                   pelist_root, &
-                                   pelist)
-
-#ifndef RLMDEBUG
-                if (allocated(context%files(file_index)%rank_list)) then
-                    call mpp_error(FATAL, &
-                                   "code should never get here.")
-                endif
-#endif
-
                 allocate(context%files(file_index)%rank_list(pelist_size))
-                context%files(file_index)%rank_list = pelist
+                call mpp_get_UG_domain_pelist(io_domain_ug_ptr, &
+                                              context%files(file_index)%rank_list)
                 context%files(file_index)%rank_list_root = pelist_root
-                deallocate(pelist)
             endif
             context%files(file_index)%io_domain_ug = mpp_get_UG_io_domain(domain_ug)
             io_domain_ug_ptr => null()
@@ -704,8 +653,6 @@ subroutine mpp_open_(context, &
         elseif (thread_flag .eq. MPP_SINGLE) then
 
             if (comm_required) then
-                call mpp_broadcast(file_index, &
-                                   pelist_root)
                 pelist_size = mpp_npes()
                 allocate(context%files(file_index)%rank_list(pelist_size))
                 call mpp_get_current_pelist(context%files(file_index)%rank_list)

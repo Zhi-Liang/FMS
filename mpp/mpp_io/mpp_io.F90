@@ -417,6 +417,8 @@ module mpp_io_mod
     end type
 
     type parallel_io_type
+        logical(kind=c_bool) :: in_use
+        integer(kind=c_int) :: c_file_index
         integer(kind=c_int) :: file_type
         integer(kind=c_int),dimension(:),allocatable :: rank_list
         integer(kind=c_int) :: rank_list_root
@@ -436,9 +438,7 @@ module mpp_io_mod
 
     type mpp_io_context_type
         type(parallel_io_type),dimension(:),allocatable :: files
-        integer(kind=c_int) :: num_netcdf_files
-        integer(kind=c_int) :: num_regular_files
-        integer(kind=c_int) :: num_hdf5_files
+        integer(kind=c_int) :: cur_num_files
     end type
 
     !--------------------------------------------------------------------------

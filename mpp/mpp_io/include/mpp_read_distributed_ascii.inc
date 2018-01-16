@@ -44,7 +44,7 @@ subroutine mpp_ascii_fread_i4_1d_(context, &
     !Local variables
     integer(kind=c_int) :: f
 
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
 
     if (context%files(file_index)%is_reader) then
@@ -127,7 +127,7 @@ subroutine mpp_ascii_fread_r8_3d_(context, &
     !Local variables
     integer(kind=c_int) :: f
 
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
 
     if (context%files(file_index)%is_reader) then
@@ -205,7 +205,7 @@ subroutine mpp_ascii_fread_r8_5d_(context, &
     !Local variables
     integer(kind=c_int) :: f
 
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
 
     if (context%files(file_index)%is_reader) then

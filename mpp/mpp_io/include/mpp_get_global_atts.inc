@@ -24,15 +24,14 @@ subroutine mpp_get_global_atts_(context, &
     type(atttype),dimension(:),intent(inout) :: global_atts
 
     !Local variables
-    integer(kind=c_int) :: f
     integer(kind=c_int) :: num_global_atts
     integer(kind=c_int) :: i
 
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
 

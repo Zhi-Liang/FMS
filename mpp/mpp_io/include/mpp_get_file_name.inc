@@ -30,7 +30,7 @@ function mpp_get_file_name_(context, &
     !Make sure that the module has been initialized and that a valid
     !file index was passed in.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
 
     if (context%files(file_index)%is_reader .or. &
@@ -98,27 +98,29 @@ function mpp_get_file_unit_(context, &
     integer(kind=c_int) :: mpp_get_file_unit_
 
     !Local variables
-    integer(kind=c_int) :: fname_length
-    integer(kind=c_int) :: i
     character(kind=c_char,len=1),dimension(:),allocatable :: c_fname
     integer(kind=c_int) :: c_file_index
+    integer(kind=c_int) :: i
 
     call check_is_init()
 
     !Copy the file name into a buffer that is interoperable with c.
-    fname_length = len_trim(file_name)
-    allocate(c_fname(fname_length+1))
-    do i = 1,fname_length
-        c_fname(i) = file_name(i:i)
-    enddo
-    c_fname(fname_length+1) = c_null_char
+    call f_string_to_c(file_name, &
+                       c_fname)
 
     c_file_index = mpp_io_c_get_file_index(c_fname, &
                                            file_type)
-
-    mpp_get_file_unit_ = convert_c_file_index(context, &
-                                              file_type, &
-                                              c_file_index)
     deallocate(c_fname)
+    mpp_get_file_unit_ = 0
+    do i = 1,context%cur_num_files
+        if (c_file_index .eq. context%files(i)%c_file_index) then
+            mpp_get_file_unit_ = i
+            exit
+        endif
+    enddo
+    if (mpp_get_file_unit_ .eq. 0) then
+        call mpp_error(FATAL, &
+                       "mpp_get_file_unit_: file index not found.")
+    endif
 
 end function mpp_get_file_unit_

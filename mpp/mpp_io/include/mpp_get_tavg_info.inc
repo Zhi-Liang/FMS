@@ -49,7 +49,6 @@ subroutine mpp_get_tavg_info_(context, &
     real(kind=c_double),dimension(:),intent(inout) :: tavg
 
     !Local variables
-    integer(kind=c_int) :: f
     logical(kind=c_bool) :: tavg_info_exists
     integer(kind=c_int) :: n
     integer(kind=c_int) :: m
@@ -57,8 +56,8 @@ subroutine mpp_get_tavg_info_(context, &
     !Make sure that the module has been initialized, that a valid
     !file index was passed in, and that the inputted file is a netcdf file.
     call check_is_init()
-    f = check_file_index(context, &
-                         file_index)
+    call check_file_index(context, &
+                          file_index)
     call check_is_netcdf_file(context, &
                               file_index)
 

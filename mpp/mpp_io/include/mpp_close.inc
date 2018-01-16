@@ -32,7 +32,7 @@ subroutine mpp_close_(context, &
     !Make sure that the module has been initialized and that a valid
     !file index was passed in.
     call check_is_init()
-    f = check_file_index(context, &
+    f = get_c_file_index(context, &
                          file_index)
 
 #ifdef RLMDEBUG
