@@ -301,9 +301,7 @@ module memutils_mod
 !#######################################################################
 
 subroutine mem_dump ( memuse )
-use mpp_mod,    only : stdout
-use mpp_io_mod, only : mpp_open, mpp_close, mpp_ascii, mpp_rdonly,     &
-                       mpp_sequential, mpp_single
+use mpp_mod, only: get_unit
 
 real, intent(out) :: memuse
 
@@ -320,9 +318,12 @@ real    :: multiplier
   multiplier = 1.0
 
   if(mem_unit == -1) then
-  call mpp_open ( mem_unit, file_name,                                 &
-                      form=MPP_ASCII,        action=MPP_RDONLY,        &
-                      access=MPP_SEQUENTIAL, threading=MPP_SINGLE )
+
+    mem_unit = get_unit()
+    open(unit=mem_unit, &
+         file=trim(file_name), &
+         access="SEQUENTIAL", &
+         action="READ")
   else
     rewind(mem_unit)
   endif  
@@ -337,8 +338,9 @@ real    :: multiplier
   if (TRIM(string(LEN_TRIM(string)-1:)) == "kB" ) &
     multiplier = 1.0/1024. ! Convert from kB to MB
 
-!10 call mpp_close ( mem_unit )
 10    memuse = memuse * multiplier
+
+  close(mem_unit)
 
   return
 end subroutine mem_dump

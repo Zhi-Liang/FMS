@@ -1049,6 +1049,17 @@ CONTAINS
     INTEGER :: file_duration1, file_duration_units1
     REAL, DIMENSION(1) :: tdata
     CHARACTER(len=128) :: time_units_str
+    INTEGER :: i
+
+    !Check for duplicates, and error if found.
+    DO i = 1,num_files
+        IF (trim(files(i)%name) .eq. trim(name)) THEN
+            call error_mesg("diag_util_mod::init_file", &
+                            "file "//trim(name)//" is defined more than" &
+                                //" once in the diag_table.", &
+                            FATAL)
+        ENDIF
+    ENDDO
 
     ! Get a number for this file
     num_files = num_files + 1
