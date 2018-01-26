@@ -57,20 +57,6 @@ subroutine netcdf_err(err, &
 
 end subroutine netcdf_err
 
-subroutine mpp_get_valid(f, &
-                         v)
-    implicit none
-
-    !Inputs/outputs
-    type(fieldtype),intent(in) :: f
-    type(validtype),intent(out) :: v
-
-!   call mpp_error(FATAL, &
-    call mpp_error(WARNING, &
-                   "mpp_get_valid: this routine is no longer supported.")
-
-end subroutine mpp_get_valid
-
 subroutine mpp_copy_meta_axis(unit, &
                               axis, &
                               domain)

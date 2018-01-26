@@ -565,6 +565,13 @@ void cmpp_io_variable_buffer_data(cmpp_io_variable_t * const * const self,
             dptr = cmpp_io_variable_get_ptr(vptr,
                                             i,
                                             DIM_PTR);
+            error_check(corner_indices[i] >= 0,
+                        "input corner index (%zu) for dimension %s"
+                            " of variable %s must be >= 0.",
+                        corner_indices[i],
+                        cmpp_io_dimension_get_name(dptr),
+                        vptr->name);
+
             if (cmpp_io_dimension_get_is_unlimited(dptr))
             {
                 error_check(edge_lengths[i] == 1,
@@ -576,6 +583,12 @@ void cmpp_io_variable_buffer_data(cmpp_io_variable_t * const * const self,
             }
             else
             {
+                error_check(edge_lengths[i] >= 1,
+                            "input edge length (%zu) for dimension %s"
+                                " of variable %s must >= 1.",
+                            edge_lengths[i],
+                            cmpp_io_dimension_get_name(dptr),
+                            vptr->name);
                 dim_length = cmpp_io_dimension_get_length(dptr);
                 error_check(corner_indices[i] + edge_lengths[i] <= dim_length,
                             "corner index (%zu) + edge length (%zu)"

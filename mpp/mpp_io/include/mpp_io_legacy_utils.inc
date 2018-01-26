@@ -32,7 +32,7 @@ logical elemental function mpp_is_valid(x, v)
     if (v%is_range) then
         mpp_is_valid = (v%min <= x) .and. (x <= v%max)
     else
-         mpp_is_valid = (x .ne. v%min)
+        mpp_is_valid = (x .ne. v%min)
     endif
 
 end function mpp_is_valid

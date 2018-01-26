@@ -488,6 +488,7 @@ module mpp_io_mod
 #include "mpp_flush.inc"
 
 #include "mpp_io_deprecated_utils.inc"
+#include "mpp_get_valid.inc"
 
 !Not working
 #include "mpp_read_distributed_ascii.inc"

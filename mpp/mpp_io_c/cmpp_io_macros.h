@@ -31,12 +31,12 @@
 #define CMPP_DELETE_FILE 501
 #define CMPP_KEEP_FILE 502
 
-#define CMPP_IO_NC_CHAR 6
-#define CMPP_IO_NC_BYTE 4
+#define CMPP_IO_NC_CHAR 1
+#define CMPP_IO_NC_BYTE 2
 #define CMPP_IO_NC_SHORT 3
-#define CMPP_IO_NC_INT 5
-#define CMPP_IO_NC_FLOAT 2
-#define CMPP_IO_NC_DOUBLE 1
+#define CMPP_IO_NC_INT 4
+#define CMPP_IO_NC_FLOAT 5
+#define CMPP_IO_NC_DOUBLE 6
 
 /*
 #define CMPP_IO_MAX_NUM_FILES 2048
