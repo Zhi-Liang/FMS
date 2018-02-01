@@ -355,6 +355,7 @@ void cmpp_io_netcdf_file_open(cmpp_io_netcdf_file_t * const * const self)
     int ncflags;
     size_t initial_size;
     int err;
+    int old_fill_mode;
 
     /*Set the local pointer to the cmpp_io_netcdf_file_t object.*/
     fptr = *self;
@@ -416,6 +417,14 @@ void cmpp_io_netcdf_file_open(cmpp_io_netcdf_file_t * const * const self)
             break;
     }
     check_netcdf_call(err);
+
+    /*Switch to "no-fill" mode for non-readonly files.*/
+    if (action != CMPP_RDONLY)
+    {
+        check_netcdf_call(nc_set_fill(fptr->ncid,
+                                      NC_NOFILL,
+                                      &old_fill_mode));
+    }
 
     /*Mark the file as open.*/
     cmpp_io_file_props_set_is_open(&(fptr->file_props),

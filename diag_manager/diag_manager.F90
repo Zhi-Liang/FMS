@@ -1,5 +1,3 @@
-#include <fms_platform.h>
-
 MODULE diag_manager_mod
   ! <CONTACT EMAIL="Matthew.Harrison@gfdl.noaa.gov">
   !   Matt Harrison
@@ -247,7 +245,8 @@ MODULE diag_manager_mod
 
   ! version number of this module
   ! Include variable "version" to be written to log file.
-#include<file_version.h>
+#include <fms_platform.h>
+#include <file_version.h>
 
   type(time_type) :: Time_end
 
@@ -3699,6 +3698,7 @@ CONTAINS
           CALL diag_data_out(file, i, output_fields(i)%buffer, time, .TRUE.)
        END IF
     END DO
+
     ! Now it's time to output static fields
     CALL write_static(file)
 

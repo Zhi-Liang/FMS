@@ -98,6 +98,7 @@ subroutine mpp_write_meta_field_(context, &
     integer(kind=c_int) :: f
     character(kind=c_char,len=1),dimension(:),allocatable :: name_buf
     integer(kind=c_int) :: i
+    integer(kind=c_int) :: j
     logical(kind=c_bool) :: found_unlimited_dimension
     integer(kind=c_int),dimension(:),allocatable :: axis_id
     integer(kind=c_int) :: type_in_file
@@ -213,15 +214,24 @@ subroutine mpp_write_meta_field_(context, &
             deallocate(field%axes)
         endif
         allocate(field%axes(num_axes))
+        if (allocated(field%size)) then
+            call mpp_error(WARNING, &
+                           "mpp_write_meta_field_: the current field has" &
+                               //" already had its metadata defined.  It is" &
+                               //" being overwritten.")
+            deallocate(field%size)
+        endif
+        allocate(field%size(num_axes))
         do i = 1,num_axes
             field%axes(i) = axes(i)
 
             !Since c reads the data in "row-based" order, flip the
             !dimension order.
-            axis_id(num_axes+1-i) = axes(i)%did
+            j = num_axes -i + 1
+            axis_id(j) = axes(i)%did
 
             if (mpp_io_c_get_netcdf_dimension_is_unlimited(f, &
-                                                           axis_id(num_axes+1-i))) then
+                                                           axis_id(j))) then
                 if (found_unlimited_dimension) then
                     call mpp_error(FATAL, &
                                    "mpp_write_meta_field_: netcdf variables" &
@@ -230,6 +240,10 @@ subroutine mpp_write_meta_field_(context, &
                 endif
                 found_unlimited_dimension = .true._c_bool
                 field%time_axis_index = i
+                field%size(i) = 1
+            else
+                field%size(i) = mpp_io_c_get_netcdf_dimension_length(f, &
+                                                                     axis_id(j))
             endif
         enddo
 

@@ -1,5 +1,3 @@
-#include <fms_platform.h>
-
 MODULE diag_util_mod
   ! <CONTACT EMAIL="seth.underwood@noaa.gov">
   !   Seth Underwood
@@ -113,7 +111,8 @@ MODULE diag_util_mod
   ! </INTERFACE>
 
   ! Include variable "version" to be written to log file.
-#include<file_version.h>
+#include <fms_platform.h>
+#include <file_version.h>
 
   LOGICAL :: module_initialized = .FALSE.
 
@@ -2491,8 +2490,10 @@ CONTAINS
        CALL diag_data_out(file, i, output_fields(i)%buffer, files(file)%last_flush, .TRUE., .TRUE.)
     END DO
     ! Close up this file
-    CALL mpp_close(files(file)%file_unit)
-    files(file)%file_unit = -1
+    IF (files(file)%file_unit .NE. -1) THEN
+        CALL mpp_close(files(file)%file_unit)
+        files(file)%file_unit = -1
+    ENDIF
   END SUBROUTINE write_static
   ! </SUBROUTINE>
 
