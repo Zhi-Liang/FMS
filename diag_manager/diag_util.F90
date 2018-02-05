@@ -33,22 +33,23 @@ MODULE diag_util_mod
        & base_second, num_files, max_files, max_fields_per_file, max_out_per_in_field,&
        & max_input_fields,num_input_fields, max_output_fields, num_output_fields, coord_type,&
        & mix_snapshot_average_fields, global_descriptor, CMOR_MISSING_VALUE, use_cmor, pack_size,&
-       & debug_diag_manager, conserve_water, output_field_type, max_field_attributes, max_file_attributes,&
+       & debug_diag_manager, flush_nc_files, output_field_type, max_field_attributes, max_file_attributes,&
        & file_type, prepend_date, region_out_use_alt_value, GLO_REG_VAL, GLO_REG_VAL_ALT,&
        & DIAG_FIELD_NOT_FOUND, diag_init_time
   USE diag_axis_mod, ONLY: get_diag_axis_data, get_axis_global_length, get_diag_axis_cart,&
        & get_domain1d, get_domain2d, diag_subaxes_init, diag_axis_init, get_diag_axis, get_axis_aux,&
-       & get_axes_shift, get_diag_axis_name, get_diag_axis_domain_name, get_domainUG
+       & get_axes_shift, get_diag_axis_name, get_diag_axis_domain_name, get_domainUG, &
+       & get_axis_reqfld, axis_is_compressed, get_compressed_axes_ids
   USE diag_output_mod, ONLY: diag_flush, diag_field_out, diag_output_init, write_axis_meta_data,&
        & write_field_meta_data, done_meta_data
   USE diag_grid_mod, ONLY: get_local_indexes
-  USE fms_mod, ONLY: error_mesg, FATAL, WARNING, mpp_pe, mpp_root_pe, lowercase, fms_error_handler,&
+  USE fms_mod, ONLY: error_mesg, FATAL, WARNING, NOTE, mpp_pe, mpp_root_pe, lowercase, fms_error_handler,&
        & write_version_number, do_cf_compliance
   USE fms_io_mod, ONLY: get_tile_string, return_domain, string, get_instance_filename
   USE mpp_domains_mod,ONLY: domain1d, domain2d, mpp_get_compute_domain, null_domain1d, null_domain2d,&
        & OPERATOR(.NE.), OPERATOR(.EQ.), mpp_modify_domain, mpp_get_domain_components,&
        & mpp_get_ntile_count, mpp_get_current_ntile, mpp_get_tile_id, mpp_mosaic_defined, mpp_get_tile_npes,&
-       & domainUG, null_domainUG 
+       & domainUG, null_domainUG
   USE time_manager_mod,ONLY: time_type, OPERATOR(==), OPERATOR(>), NO_CALENDAR, increment_date,&
        & increment_time, get_calendar_type, get_date, get_time, leap_year, OPERATOR(-),&
        & OPERATOR(<), OPERATOR(>=), OPERATOR(<=)
@@ -281,8 +282,12 @@ CONTAINS
        ALLOCATE(global_lat(global_axis_size))
        CALL get_diag_axis_data(axes(1),global_lon)
        CALL get_diag_axis_data(axes(2),global_lat)
-       IF (   (gstart_indx(1) > 0 .AND. gstart_indx(2) > 0) .AND. &
-            & (gend_indx(1) > 0 .AND. gend_indx(2) > 0) ) THEN
+
+       !Potential fix for out-of-bounds error for global_lon and global_lat.
+       IF ((gstart_indx(1) .GT. 0 .AND. gstart_indx(2) .GT. 0) .AND. &
+           (gstart_indx(1) .LE. global_axis_size .AND. gstart_indx(2) .LE. global_axis_size) .AND. &
+           (gend_indx(1) .GT. 0 .AND. gend_indx(2) .GT. 0) .AND. &
+           (gend_indx(1) .LE. global_axis_size .AND. gend_indx(2) .LE. global_axis_size)) THEN
           ALLOCATE(subaxis_x(gstart_indx(1):gend_indx(1)))
           ALLOCATE(subaxis_y(gstart_indx(2):gend_indx(2)))
           subaxis_x=global_lon(gstart_indx(1):gend_indx(1))
@@ -1395,6 +1400,7 @@ CONTAINS
     INTEGER :: grv !< Value used to determine if the region defined in the diag_table is for the whole axis, or a sub-axis
     CHARACTER(len=128) :: error_msg
     CHARACTER(len=50) :: t_method
+    character(len=256) :: tmp_name
 
     ! Value to use to determine if a region is to be output on the full axis, or sub-axis
     ! get the value to compare to determine if writing full axis data
@@ -1582,15 +1588,23 @@ CONTAINS
        CASE ( 'maximum', 'max' )
           output_fields(out_num)%time_max = .TRUE.
           l1 = LEN_TRIM(output_fields(out_num)%output_name)
-          IF ( lowercase(trim(adjustl(output_fields(out_num)%output_name(l1-2:l1)))) /= 'max' ) &
-               output_fields(out_num)%output_name = TRIM(output_name)//'_max'
+          if (l1 .ge. 3) then
+              tmp_name = trim(adjustl(output_fields(out_num)%output_name(l1-2:l1)))
+              IF (lowercase(trim(tmp_name)) /= 'max' ) then
+                  output_fields(out_num)%output_name = TRIM(output_name)//'_max'
+               endif
+          endif
           method_selected = method_selected+1
           t_method = 'max'
        CASE ( 'minimum', 'min' )
           output_fields(out_num)%time_min = .TRUE.
           l1 = LEN_TRIM(output_fields(out_num)%output_name)
-          IF ( lowercase(trim(adjustl(output_fields(out_num)%output_name(l1-2:l1)))) /= 'min' )&
-               & output_fields(out_num)%output_name = TRIM(output_name)//'_min'
+          if (l1 .ge. 3) then
+              tmp_name = trim(adjustl(output_fields(out_num)%output_name(l1-2:l1)))
+              IF (lowercase(trim(tmp_name)) /= 'min' ) then
+                  output_fields(out_num)%output_name = TRIM(output_name)//'_min'
+              endif
+          endif
           method_selected = method_selected+1
           t_method = 'min'
        CASE ( 'sum', 'cumsum' )
@@ -1671,7 +1685,7 @@ CONTAINS
   !     Open file for output, and write the meta data.  <BB>Warning:</BB> Assumes all data structures have been fully initialized.
   !   </DESCRIPTION>
   !   <IN NAME="file" TYPE="INTEGER">File ID.</IN>
-  !   <IN NAME="tile" TYPE="TYPE(time_type)">Tile number.</IN>
+  !   <IN NAME="tile" TYPE="TYPE(time_type)">Time for the file time stamp</IN>
   SUBROUTINE opening_file(file, time)
     ! WARNING: Assumes that all data structures are fully initialized
     INTEGER, INTENT(in) :: file
@@ -1690,11 +1704,12 @@ CONTAINS
     ! axes per field + 2; the last two elements are for time
     ! and time bounds dimensions
     INTEGER, DIMENSION(6) :: axes
-    LOGICAL :: time_ops, aux_present, match_aux_name
+    INTEGER, ALLOCATABLE  :: axesc(:) ! indices if compressed axes associated with the field
+    LOGICAL :: time_ops, aux_present, match_aux_name, req_present, match_req_fields
     LOGICAL :: all_scalar_or_1d
     CHARACTER(len=7) :: prefix
     CHARACTER(len=7) :: avg_name = 'average'
-    CHARACTER(len=128) :: time_units, timeb_units, avg, error_string, filename, aux_name,fieldname
+    CHARACTER(len=128) :: time_units, timeb_units, avg, error_string, filename, aux_name, req_fields, fieldname
     CHARACTER(len=128) :: suffix, base_name
     CHARACTER(len=32) :: time_name, timeb_name,time_longname, timeb_longname, cart_name
     CHARACTER(len=256) :: fname
@@ -1702,10 +1717,13 @@ CONTAINS
     TYPE(domain1d) :: domain
     TYPE(domain2d) :: domain2
     TYPE(domainUG) :: domainU
+    INTEGER :: is, ie, last, ind
 
 
     aux_present = .FALSE.
     match_aux_name = .FALSE.
+    req_present = .FALSE.
+    match_req_fields = .FALSE.
 
     ! Here is where time_units string must be set up; time since base date
     WRITE (time_units, 11) TRIM(time_unit_list(files(file)%time_units)), base_year,&
@@ -1764,33 +1782,50 @@ CONTAINS
        END IF
     END DO
 
-    IF( .NOT.all_scalar_or_1d ) THEN
-        IF (domainU .ne. null_domainUG .AND. domain2 .ne. null_domain2D) then
-            CALL error_mesg('diag_util_mod::opening_file',&
-                            'Domain2 and DomainU are somehow both set.', FATAL)
-        ELSEIF ( domainU .eq. null_domainUG) then
-            IF ( domain2 .EQ. NULL_DOMAIN2D ) then
+    IF (.NOT. all_scalar_or_1d) THEN
+        IF (domainU .NE. null_domainUG .AND. domain2 .NE. null_domain2D) THEN
+            CALL error_mesg('diag_util_mod::opening_file', &
+                            'Domain2 and DomainU are somehow both set.', &
+                            FATAL)
+        ELSEIF (domainU .EQ. null_domainUG) THEN
+            IF (domain2 .EQ. NULL_DOMAIN2D) THEN
                 CALL return_domain(domain2)
-            endif
-            IF ( domain2 .EQ. NULL_DOMAIN2D ) THEN
-               ! <ERROR STATUS="FATAL">
-               !   Domain not defined through set_domain interface; cannot retrieve tile info
-               ! </ERROR>
-                CALL error_mesg('diag_util_mod::opening_file',&
-                                'Domain not defined through set_domain interface;' &
-                                //' cannot retrieve tile info',FATAL)
             ENDIF
-            ntileMe = mpp_get_current_ntile(domain2)
-            ALLOCATE(tile_id(ntileMe))
-            tile_id = mpp_get_tile_id(domain2)
-            fname = TRIM(filename)
-            IF ( mpp_get_ntile_count(domain2) > 1 ) THEN
-               CALL get_tile_string(filename, TRIM(fname)//'.tile' , tile_id(files(file)%tile_count))
-            else if( tile_id(1) > 1 ) then
-               CALL get_tile_string(filename, TRIM(fname)//'.tile' , tile_id(1))
-            endif
-            DEALLOCATE(tile_id)
-        endif
+
+            IF (domain2 .EQ. NULL_DOMAIN2D) THEN
+
+                !Fix for the corner-case when you have a file that contains
+                !2D field(s) that is not associated with a domain tile, as
+                !is usually assumed.
+
+                !This is very confusing, but I will try to explain.  The
+                !all_scalar_or_1d flag determines if the file name is associated
+                !with a domain (i.e. has ".tilex." in the file name).  A value
+                !of .FALSE. for the all_scalar_or_1d flag signals that the
+                !file name is associated with a domain tile.  Normally,
+                !files that contain at least one two-dimensional field are
+                !assumed to be associated with a specific domain tile, and
+                !thus have the value of the all_scalar_or_1d flag set to
+                !.FALSE.  It is possible, however, to have a file that contains
+                !two-dimensional fields that is not associated with a domain tile
+                !(i.e., if you make it into this branch.).  If that is the
+                !case, then reset the all_scalar_or_1d flag back to .TRUE.
+                !Got that?
+                all_scalar_or_1d = .TRUE.
+
+            ELSE
+                ntileMe = mpp_get_current_ntile(domain2)
+                ALLOCATE(tile_id(ntileMe))
+                tile_id = mpp_get_tile_id(domain2)
+                fname = TRIM(filename)
+                IF ( mpp_get_ntile_count(domain2) > 1 ) THEN
+                   CALL get_tile_string(filename, TRIM(fname)//'.tile' , tile_id(files(file)%tile_count))
+                ELSEIF ( tile_id(1) > 1 ) then
+                   CALL get_tile_string(filename, TRIM(fname)//'.tile' , tile_id(1))
+                ENDIF
+                DEALLOCATE(tile_id)
+            ENDIF
+        ENDIF
     ENDIF
     IF ( domainU .ne. null_domainUG) then
 !          ntileMe = mpp_get_UG_current_ntile(domainU)
@@ -1865,6 +1900,18 @@ CONTAINS
              END IF
           END DO
        END IF
+       ! check if required fields are present in any axes
+       IF ( .NOT.req_present ) THEN
+          DO k = 1, num_axes
+             req_fields = get_axis_reqfld(axes(k))
+             IF ( TRIM(req_fields) /= 'none' ) THEN
+                CALL error_mesg('diag_util_mod::opening_file','required fields found: '//&
+                               &TRIM(req_fields)//' in file '//TRIM(files(file)%name),NOTE)
+                req_present = .TRUE.
+                EXIT
+             END IF
+          END DO
+       END IF
 
        axes(num_axes + 1) = files(file)%time_axis_id
        CALL write_axis_meta_data(files(file)%file_unit, axes(1:num_axes + 1), time_ops)
@@ -1872,6 +1919,16 @@ CONTAINS
           axes(num_axes + 2) = files(file)%time_bounds_id
           CALL write_axis_meta_data(files(file)%file_unit, axes(1:num_axes + 2))
        END IF
+       ! write metadata for axes used  in compression-by-gathering, e.g. for unstructured
+       ! grid
+       DO k = 1, num_axes
+          IF (axis_is_compressed(axes(k))) THEN
+             CALL get_compressed_axes_ids(axes(k), axesc) ! returns allocatable array
+             CALL write_axis_meta_data(files(file)%file_unit, axesc)
+             DEALLOCATE(axesc)
+          ENDIF
+       ENDDO
+
     END DO
 
     ! Looking for the first NON-static field in a file
@@ -1908,6 +1965,23 @@ CONTAINS
        IF ( aux_present .AND. .NOT.match_aux_name ) THEN
           fieldname = output_fields(field_num)%output_name
           IF ( INDEX(aux_name, TRIM(fieldname)) > 0 ) match_aux_name = .TRUE.
+       END IF
+       ! check if any field has the same name as req_fields
+       IF ( req_present .AND. .NOT.match_req_fields ) THEN
+          fieldname = output_fields(field_num)%output_name
+          is = 1; last = len_trim(req_fields)
+          DO
+            ind = index(req_fields(is:last),' ')
+            IF (ind .eq. 0) ind = last-is+2
+            ie = is+(ind-2)
+            if (req_fields(is:ie) .EQ. trim(fieldname)) then
+              match_req_fields = .TRUE.
+             !CALL error_mesg('diag_util_mod::opening_file','matched required field: '//TRIM(fieldname),NOTE)
+              EXIT
+            END IF
+            is = is+ind
+            if (is .GT. last) EXIT
+          END DO
        END IF
 
        ! Put the time axis in the axis field
@@ -2028,6 +2102,15 @@ CONTAINS
        ! </ERROR>
        IF ( mpp_pe() == mpp_root_pe() ) CALL error_mesg('diag_util_mod::opening_file',&
             &'one axis has auxiliary but the corresponding field is NOT found in file '//TRIM(files(file)%name), WARNING)
+    END IF
+    IF( req_present .AND. .NOT.match_req_fields ) THEN
+       ! <ERROR STATUS="FATAL">
+       !   one axis has required fields but the corresponding field is NOT
+       !   found in file <file_name>
+       ! </ERROR>
+       IF ( mpp_pe() == mpp_root_pe() ) CALL error_mesg('diag_util_mod::opening_file',&
+                  &'one axis has required fields ('//trim(req_fields)//') but the '// &
+                  &'corresponding fields are NOT found in file '//TRIM(files(file)%name), FATAL)
     END IF
   END SUBROUTINE opening_file
   ! </SUBROUTINE>
@@ -2307,7 +2390,7 @@ CONTAINS
           files(file)%last_flush = time
        END IF
     ELSE
-       IF ( time > files(file)%last_flush .AND. (.NOT.conserve_water.OR.debug_diag_manager) ) THEN
+       IF ( time > files(file)%last_flush .AND. (flush_nc_files.OR.debug_diag_manager) ) THEN
           CALL diag_flush(files(file)%file_unit)
           files(file)%last_flush = time
        END IF

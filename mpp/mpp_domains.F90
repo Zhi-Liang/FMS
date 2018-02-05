@@ -229,8 +229,8 @@ module mpp_domains_mod
   public :: mpp_get_io_domain_UG_layout
 
   integer, parameter :: NAME_LENGTH = 64
-  integer, parameter :: MAXLIST = 24
-  integer, parameter :: MAXOVERLAP = 100
+  integer, parameter :: MAXLIST = 100
+  integer, parameter :: MAXOVERLAP = 200
   integer, parameter :: FIELD_S = 0
   integer, parameter :: FIELD_X = 1
   integer, parameter :: FIELD_Y = 2

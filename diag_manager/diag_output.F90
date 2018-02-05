@@ -102,8 +102,8 @@ CONTAINS
     IF ( .NOT.module_is_initialized ) THEN
        CALL mpp_io_init ()
        module_is_initialized = .TRUE.
+       CALL write_version_number("DIAG_OUTPUT_MOD", version)
     END IF
-    CALL write_version_number("DIAG_OUTPUT_MOD", version)
 
     !---- set up output file ----
     SELECT CASE (FORMAT)
@@ -131,7 +131,7 @@ CONTAINS
     IF ( domain .NE. NULL_DOMAIN2D ) THEN
        CALL mpp_open(file_unit, file_name, action=MPP_OVERWR, form=form,&
             & threading=threading, fileset=fileset, domain=domain)
-    ELSEif (domainU .NE. NULL_DOMAINUG) THEN
+    ELSE IF (domainU .NE. NULL_DOMAINUG) THEN
        CALL mpp_open(file_unit, file_name, action=MPP_OVERWR, form=form,&
             & threading=threading, fileset=fileset, domain_UG=domainU)
     ELSE
@@ -486,7 +486,7 @@ CONTAINS
     INTEGER, OPTIONAL, INTENT(in) :: num_attributes
     LOGICAL, OPTIONAL, INTENT(in) :: use_UGdomain
 
-    CHARACTER(len=128) :: standard_name2
+    CHARACTER(len=256) :: standard_name2
     CHARACTER(len=1280) :: att_str
     TYPE(diag_fieldtype) :: Field
     LOGICAL :: coord_present

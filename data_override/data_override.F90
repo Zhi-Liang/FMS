@@ -1507,7 +1507,7 @@ end module data_override_mod
   use mpp_domains_mod, only : WUPDATE, SUPDATE, mpp_get_compute_domains
   use mpp_domains_mod, only : domainUG, mpp_define_unstruct_domain, mpp_get_UG_domain_tile_id
   use mpp_domains_mod, only : mpp_get_UG_compute_domain, mpp_pass_SG_to_UG, mpp_pass_UG_to_SG
-  use mpp_domains_mod, only : mpp_get_ug_global_domain
+  use mpp_domains_mod, only : mpp_get_ug_global_domain, mpp_global_field_ug
   use mpp_memutils_mod, only : mpp_memuse_begin, mpp_memuse_end
 
  implicit none
