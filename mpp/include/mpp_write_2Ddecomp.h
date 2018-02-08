@@ -32,7 +32,7 @@
       logical :: data_has_halos, halos_are_global, x_is_global, y_is_global
       integer :: is, ie, js, je, isd, ied, jsd, jed, isg, ieg, jsg, jeg, ism, iem, jsm, jem
       integer :: position, errunit, flags
-      type(domain2d), pointer :: io_domain=>NULL()
+      type(domain2d) :: io_domain
 
       call mpp_clock_begin(mpp_write_clock)
 
@@ -96,7 +96,7 @@
                  call write_record( unit, field, size(data(:,:,:)), data, tstamp)
               endif
           else
-              io_domain=>mpp_get_io_domain(mpp_file(unit)%domain) 
+              io_domain=mpp_get_io_domain(mpp_file(unit)%domain) 
               call mpp_get_global_domain ( io_domain, isg, ieg, jsg, jeg, tile_count=tile_count, position=position )
               if(mpp_file(unit)%write_on_this_pe .OR. .NOT. global_field_on_root_pe) then
                  allocate( gdata(isg:ieg,jsg:jeg,size(data,3)) )
@@ -108,7 +108,6 @@
               else
                  call mpp_global_field( io_domain, data, gdata, flags=flags, position=position)
               endif
-              io_domain => NULL()
               if(mpp_file(unit)%write_on_this_pe ) then
                  call write_record( unit, field, size(gdata(:,:,:)), gdata, tstamp)
               endif
@@ -146,7 +145,7 @@
       logical :: data_has_halos, halos_are_global, x_is_global, y_is_global
       integer :: is, ie, js, je, isd, ied, jsd, jed, isg, ieg, jsg, jeg, ism, iem, jsm, jem
       integer :: position, errunit, flags
-      type(domain2d), pointer :: io_domain=>NULL()
+      type(domain2d) :: io_domain
 
       errunit = stderr()
       call mpp_clock_begin(mpp_write_clock)
@@ -209,7 +208,7 @@
                  call write_record( unit, field, size(data(:,:,:,:)), data, tstamp)
               endif
           else
-              io_domain=>mpp_get_io_domain(mpp_file(unit)%domain) 
+              io_domain=mpp_get_io_domain(mpp_file(unit)%domain) 
               call mpp_get_global_domain ( io_domain, isg, ieg, jsg, jeg, tile_count=tile_count, position=position )
               if(mpp_file(unit)%write_on_this_pe .OR. .NOT. global_field_on_root_pe) then
                  allocate( gdata(isg:ieg,jsg:jeg,size(data,3),size(data,4)) )
@@ -221,7 +220,6 @@
               else
                  call mpp_global_field( io_domain, data, gdata, flags=flags, position=position)
               endif
-              io_domain => NULL()
               if(mpp_file(unit)%write_on_this_pe ) then
                  call write_record( unit, field, size(gdata(:,:,:,:)), gdata, tstamp)
               endif

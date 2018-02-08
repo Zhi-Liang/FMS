@@ -210,6 +210,7 @@ module mpp_domains_mod
   public :: mpp_define_mosaic_pelist, mpp_define_null_domain
   public :: mpp_define_io_domain, mpp_deallocate_domain
   public :: mpp_compute_extent, mpp_compute_block_extent
+  public :: mpp_domain_is_defined
 
   !--- public interface for unstruct domain
   public :: mpp_define_unstruct_domain, domainUG, mpp_get_UG_io_domain
@@ -219,6 +220,7 @@ module mpp_domains_mod
   public :: mpp_get_ug_domain_tile_list, mpp_get_UG_compute_domains
   public :: mpp_define_null_UG_domain, NULL_DOMAINUG, mpp_get_UG_domains_index
   public :: mpp_get_UG_SG_domain, mpp_get_UG_domain_tile_pe_inf
+  public :: mpp_domainUG_is_defined
 
   !--- public interface from mpp_define_domains.inc
   public :: mpp_define_nest_domains, mpp_get_C2F_index, mpp_get_F2C_index
@@ -231,6 +233,10 @@ module mpp_domains_mod
   integer, parameter :: NAME_LENGTH = 64
   integer, parameter :: MAXLIST = 100
   integer, parameter :: MAXOVERLAP = 200
+  integer, parameter :: DOMAIN2D_INDEX_START = 1
+  integer, parameter :: DOMAIN2D_INDEX_END = 200
+  integer, parameter :: DOMAINUG_INDEX_START = 1001
+  integer, parameter :: DOMAINUG_INDEX_END = 1200
   integer, parameter :: FIELD_S = 0
   integer, parameter :: FIELD_X = 1
   integer, parameter :: FIELD_Y = 2
@@ -241,54 +247,6 @@ module mpp_domains_mod
   integer, parameter :: MPP_INT    = 3
 
   !--- data types used mpp_domains_mod.
-  type unstruct_axis_spec
-     private
-     integer :: begin, end, size, max_size
-     integer :: begin_index, end_index
-  end type unstruct_axis_spec
-
-  type unstruct_domain_spec
-     private
-     type(unstruct_axis_spec) :: compute
-     integer :: pe
-     integer :: pos
-     integer :: tile_id
-  end type unstruct_domain_spec
-
-  type unstruct_overlap_type
-     private
-     integer :: count = 0
-     integer :: pe
-     integer, pointer :: i(:)=>NULL()
-     integer, pointer :: j(:)=>NULL()
-  end type unstruct_overlap_type
-
-  type unstruct_pass_type
-     private
-     integer :: nsend, nrecv
-     type(unstruct_overlap_type), pointer :: recv(:)=>NULL()
-     type(unstruct_overlap_type), pointer :: send(:)=>NULL()
-  end type unstruct_pass_type
-
-  type domainUG
-     private
-     type(unstruct_axis_spec) :: compute, global
-     type(unstruct_domain_spec), pointer :: list(:)=>NULL()
-     type(domainUG), pointer :: io_domain=>NULL()
-     type(unstruct_pass_type) :: SG2UG
-     type(unstruct_pass_type) :: UG2SG
-     integer, pointer :: grid_index(:) => NULL()    ! on current pe
-     type(domain2d), pointer :: SG_domain => NULL()
-     integer :: pe 
-     integer :: pos
-     integer :: ntiles
-     integer :: tile_id
-     integer :: tile_root_pe
-     integer :: tile_npes
-     integer :: npes_io_group
-     integer(INT_KIND) :: io_layout
-  end type domainUG
-
   type domain_axis_spec        !type used to specify index limits along an axis of a domain
      private
      integer :: begin, end, size, max_size      !start, end of domain axis, size, max size in set
@@ -355,11 +313,17 @@ module mpp_domains_mod
      integer :: xbegin, xend, ybegin, yend
   end type tile_type
 
+  !--- public domain2D only contains the index in array domain2d_list
+  type domain2D
+     private
+     integer :: index=0
+  end type domain2D
+
 !domaintypes of higher rank can be constructed from type domain1D
 !typically we only need 1 and 2D, but could need higher (e.g 3D LES)
 !some elements are repeated below if they are needed once per domain, not once per axis
 
-  type domain2D
+  type domain2D_private
      private
      character(len=NAME_LENGTH)  :: name='unnamed'          ! name of the domain, default is "unspecified"
      integer(LONG_KIND)          :: id 
@@ -393,8 +357,67 @@ module mpp_domains_mod
      type(overlapSpec),  pointer :: update_E      => NULL() ! send and recv information for halo update of E-cell.
      type(overlapSpec),  pointer :: update_C      => NULL() ! send and recv information for halo update of C-cell.
      type(overlapSpec),  pointer :: update_N      => NULL() ! send and recv information for halo update of N-cell.
-     type(domain2d),     pointer :: io_domain     => NULL() ! domain for IO, will be set through calling mpp_set_io_domain ( this will be changed).
-  end type domain2D     
+     integer                     :: io_domain_index=0       ! index in domainList
+  end type domain2D_private     
+
+  integer            :: cur_domain_index = DOMAIN2D_INDEX_START-1
+  type(domain2D_private), target :: domainList(DOMAIN2D_INDEX_START:DOMAIN2D_INDEX_END)
+
+  type unstruct_axis_spec
+     private
+     integer :: begin, end, size, max_size
+     integer :: begin_index, end_index
+  end type unstruct_axis_spec
+
+  type unstruct_domain_spec
+     private
+     type(unstruct_axis_spec) :: compute
+     integer :: pe
+     integer :: pos
+     integer :: tile_id
+  end type unstruct_domain_spec
+
+  type unstruct_overlap_type
+     private
+     integer :: count = 0
+     integer :: pe
+     integer, pointer :: i(:)=>NULL()
+     integer, pointer :: j(:)=>NULL()
+  end type unstruct_overlap_type
+
+  type unstruct_pass_type
+     private
+     integer :: nsend, nrecv
+     type(unstruct_overlap_type), pointer :: recv(:)=>NULL()
+     type(unstruct_overlap_type), pointer :: send(:)=>NULL()
+  end type unstruct_pass_type
+
+  type domainUG
+     private
+     integer :: index = 0 ! index in domainUGList
+  end type domainUG
+
+  type domainUG_private
+     private
+     type(unstruct_axis_spec) :: compute, global
+     type(unstruct_domain_spec), pointer :: list(:)=>NULL()
+     integer :: io_domain_index = 0 ! index in domainUGList
+     type(unstruct_pass_type) :: SG2UG
+     type(unstruct_pass_type) :: UG2SG
+     integer, pointer :: grid_index(:) => NULL()    ! on current pe
+     integer          :: sg_domain_index = 0
+     integer :: pe
+     integer :: pos
+     integer :: ntiles
+     integer :: tile_id
+     integer :: tile_root_pe
+     integer :: tile_npes
+     integer :: npes_io_group
+     integer(INT_KIND) :: io_layout
+  end type domainUG_private
+
+  integer                :: cur_domainUG_index = DOMAINUG_INDEX_START-1
+  type(domainUG_private), target :: domainUGList(DOMAINUG_INDEX_START:DOMAINUG_INDEX_END)
 
   !--- the following type is used to reprsent the contact between tiles.
   !--- this type will only be used in mpp_domains_define.inc
@@ -458,9 +481,9 @@ module mpp_domains_mod
      integer(LONG_KIND) :: l_addr  =-9999
      integer(LONG_KIND) :: l_addrx =-9999
      integer(LONG_KIND) :: l_addry =-9999
-     type(domain2D), pointer :: domain     =>NULL()
-     type(domain2D), pointer :: domain_in  =>NULL()
-     type(domain2D), pointer :: domain_out =>NULL()
+     type(domain2D_private), pointer :: domain     =>NULL()
+     type(domain2D_private), pointer :: domain_in  =>NULL()
+     type(domain2D_private), pointer :: domain_out =>NULL()
      type(overlapSpec), pointer :: send(:,:,:,:) => NULL()
      type(overlapSpec), pointer :: recv(:,:,:,:) => NULL()
      integer, dimension(:,:),       _ALLOCATABLE :: sendis _NULL
@@ -1792,6 +1815,11 @@ end interface
      module procedure mpp_domainUG_ne
   end interface
 
+  interface mpp_get_domain_shift
+    module procedure mpp_get_domain2D_shift
+    module procedure mpp_get_domain2D_shift_private
+  end interface
+
   ! <INTERFACE NAME="mpp_get_compute_domain">
   !  <OVERVIEW>
   !    These routines retrieve the axis specifications associated with the compute domains.
@@ -1808,6 +1836,7 @@ end interface
   interface mpp_get_compute_domain
      module procedure mpp_get_compute_domain1D
      module procedure mpp_get_compute_domain2D
+     module procedure mpp_get_compute_domain2D_private
   end interface
 
   ! <INTERFACE NAME="mpp_get_compute_domains">
@@ -1829,6 +1858,7 @@ end interface
   interface mpp_get_compute_domains
      module procedure mpp_get_compute_domains1D
      module procedure mpp_get_compute_domains2D
+     module procedure mpp_get_compute_domains2D_private
   end interface
 
   ! <INTERFACE NAME="mpp_get_data_domain">
@@ -1847,6 +1877,7 @@ end interface
   interface mpp_get_data_domain
      module procedure mpp_get_data_domain1D
      module procedure mpp_get_data_domain2D
+     module procedure mpp_get_data_domain2D_private
   end interface
 
   ! <INTERFACE NAME="mpp_get_global_domain">
@@ -1865,6 +1896,7 @@ end interface
   interface mpp_get_global_domain
      module procedure mpp_get_global_domain1D
      module procedure mpp_get_global_domain2D
+     module procedure mpp_get_global_domain2D_private
   end interface
 
   ! <INTERFACE NAME="mpp_get_memory_domain">
@@ -1883,6 +1915,7 @@ end interface
   interface mpp_get_memory_domain
      module procedure mpp_get_memory_domain1D
      module procedure mpp_get_memory_domain2D
+     module procedure mpp_get_memory_domain2D_private
   end interface
 
   interface mpp_get_domain_extents

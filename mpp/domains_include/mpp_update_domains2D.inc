@@ -1,7 +1,7 @@
-subroutine mpp_update_domain_core(domain, cptr, isize_in, jsize_in, ksize_in, data_type_in, flags, complete, position, &
+subroutine mpp_update_domain_core(domainObj, cptr, isize_in, jsize_in, ksize_in, data_type_in, flags, complete, position, &
      whalo, ehalo, shalo, nhalo, name, tile_count)
   !updates data domain of 3D field whose computational domain have been computed
-  type(domain2D),   intent(inout)        :: domain  
+  type(domain2D),   intent(inout)        :: domainObj
   type(C_PTR),         intent(in)        :: cptr
   integer,          intent(in)           :: isize_in, jsize_in, ksize_in, data_type_in
   integer,          intent(in), optional :: flags
@@ -23,7 +23,9 @@ subroutine mpp_update_domain_core(domain, cptr, isize_in, jsize_in, ksize_in, da
   integer, save    :: pos, whalosz, ehalosz, shalosz, nhalosz, flags_saved
   type(overlapSpec), pointer :: update => NULL()
   type(overlapSpec), pointer :: check  => NULL()
+  type(domain2d_private), pointer :: domain => NULL()
 
+  domain => domainList(domainObj%index)
   call get_domain_halos(domain, update_whalo, update_ehalo, update_shalo, update_nhalo, whalo, ehalo, shalo, nhalo)
 
   !--- when there is NINETY or MINUS_NINETY rotation for some contact, the salar data can not be on E or N-cell,
@@ -100,9 +102,9 @@ subroutine mpp_update_domain_core(domain, cptr, isize_in, jsize_in, ksize_in, da
            check => search_check_overlap(domain, update_position) 
            if(ASSOCIATED(check) ) then
               if( data_type == MPP_DOUBLE) then
-                 call mpp_do_check_r8(s_r8(1:l_size,1:ntile), check, ke, name )
+                 call do_check_r8(s_r8(1:l_size,1:ntile), check, ke, name )
               else
-                 call mpp_do_check_r4(s_r4(1:l_size,1:ntile), check, ke, name ) 
+                 call do_check_r4(s_r4(1:l_size,1:ntile), check, ke, name ) 
               endif
            endif
         endif
@@ -113,11 +115,11 @@ subroutine mpp_update_domain_core(domain, cptr, isize_in, jsize_in, ksize_in, da
            call check_message_size(domain, update, send, recv, name=name)
         endif
         if( data_type == MPP_DOUBLE) then
-           call mpp_do_update_r8(s_r8(1:l_size,1:ntile), update, ke, update_flags )
+           call do_update_r8(s_r8(1:l_size,1:ntile), update, ke, update_flags )
         else if(data_type == MPP_FLOAT) then
-           call mpp_do_update_r4(s_r4(1:l_size,1:ntile), update, ke, update_flags )                 
+           call do_update_r4(s_r4(1:l_size,1:ntile), update, ke, update_flags )                 
         else if(data_type == MPP_INT) then
-           call mpp_do_update_i4(i_r4(1:l_size,1:ntile), update, ke, update_flags )
+           call do_update_i4(i_r4(1:l_size,1:ntile), update, ke, update_flags )
         else
            call mpp_error(FATAL,"mpp_update_domain_core: only support 4-byte real, 8-byte real and 4-byte int, contact developer")
         endif
@@ -228,7 +230,7 @@ subroutine mpp_update_domain_5d( field, domain, flags, complete, position, &
   return
 end subroutine mpp_update_domain_5d
 
-subroutine mpp_do_update_r8(sHold, update, ke, update_flags)
+subroutine do_update_r8(sHold, update, ke, update_flags)
   !updates data domain of 3D field whose computational domains have been computed
   type(holder_r8_type),    intent(inout) :: sHold(:,:)
   type(overlapSpec),          intent(in) :: update
@@ -239,9 +241,9 @@ subroutine mpp_do_update_r8(sHold, update, ke, update_flags)
 #include "do_update.inc"
 
   return
-end subroutine mpp_do_update_r8
+end subroutine do_update_r8
 
-subroutine mpp_do_update_r4( sHold, update, ke, update_flags)
+subroutine do_update_r4( sHold, update, ke, update_flags)
   !updates data domain of 3D field whose computational domains have been computed
   type(holder_r4_type),    intent(inout) :: sHold(:,:)
   type(overlapSpec),          intent(in) :: update
@@ -252,9 +254,9 @@ subroutine mpp_do_update_r4( sHold, update, ke, update_flags)
 #include "do_update.inc"
 
   return
-end subroutine mpp_do_update_r4
+end subroutine do_update_r4
 
-subroutine mpp_do_update_i4( sHold, update, ke, update_flags)
+subroutine do_update_i4( sHold, update, ke, update_flags)
   !updates data domain of 3D field whose computational domains have been computed
   type(holder_i4_type),    intent(inout) :: sHold(:,:)
   type(overlapSpec),          intent(in) :: update
@@ -265,13 +267,13 @@ subroutine mpp_do_update_i4( sHold, update, ke, update_flags)
 #include "do_update.inc"
 
   return
-end subroutine mpp_do_update_i4
+end subroutine do_update_i4
 
-subroutine mpp_update_domainV_core( domain, cptr_x, cptr_y, isizex_in, jsizex_in, isizey_in, jsizey_in, ksizex_in, ksizey_in, &
+subroutine mpp_update_domainV_core( domainObj, cptr_x, cptr_y, isizex_in, jsizex_in, isizey_in, jsizey_in, ksizex_in, ksizey_in, &
                                     data_typex_in, data_typey_in, flags, gridtype, complete,  &
                                     whalo, ehalo, shalo, nhalo, name, tile_count)
   !updates data domain of 3D field whose computational domains have been computed
-  type(domain2D),   intent(inout)        :: domain
+  type(domain2D),   intent(inout)        :: domainObj
    type(C_PTR),        intent(in)        :: cptr_x, cptr_y
   integer,          intent(in)           :: isizex_in, jsizex_in, ksizex_in, data_typex_in
   integer,          intent(in)           :: isizey_in, jsizey_in, ksizey_in, data_typey_in
@@ -297,6 +299,9 @@ subroutine mpp_update_domainV_core( domain, cptr_x, cptr_y, isizex_in, jsizex_in
   type(overlapSpec),  pointer :: updatey => NULL()
   type(overlapSpec),  pointer :: checkx  => NULL()
   type(overlapSpec),  pointer :: checky  => NULL()
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain=>domainList(domainObj%index)
 
   call get_domain_halos(domain, update_whalo, update_ehalo, update_shalo, update_nhalo, whalo, ehalo, shalo, nhalo)
 
@@ -414,18 +419,18 @@ subroutine mpp_update_domainV_core( domain, cptr_x, cptr_y, isizex_in, jsizex_in
            if(ASSOCIATED(checkx)) then
               if(exchange_uv) then
                  if( data_type == MPP_DOUBLE) then
-                    call mpp_do_checkV_r8(x_r8(1:l_size,1:ntile),y_r8(1:l_size,1:ntile), domain,        &
+                    call do_checkV_r8(x_r8(1:l_size,1:ntile),y_r8(1:l_size,1:ntile), domain,        &
                          checky, checkx, ke, update_flags, name)
                  else
-                    call mpp_do_checkV_r4(x_r4(1:l_size,1:ntile),y_r4(1:l_size,1:ntile), domain,        &
+                    call do_checkV_r4(x_r4(1:l_size,1:ntile),y_r4(1:l_size,1:ntile), domain,        &
                          checky, checkx, ke, update_flags, name)
                  endif
               else
                  if( data_type == MPP_DOUBLE) then
-                    call mpp_do_checkV_r8(x_r8(1:l_size,1:ntile),y_r8(1:l_size,1:ntile), domain,        &
+                    call do_checkV_r8(x_r8(1:l_size,1:ntile),y_r8(1:l_size,1:ntile), domain,        &
                          checkx, checky, ke, update_flags, name)
                  else
-                    call mpp_do_checkV_r4(x_r4(1:l_size,1:ntile),y_r4(1:l_size,1:ntile), domain,        &
+                    call do_checkV_r4(x_r4(1:l_size,1:ntile),y_r4(1:l_size,1:ntile), domain,        &
                          checkx, checky, ke, update_flags, name)
                  endif
               end if
@@ -439,18 +444,18 @@ subroutine mpp_update_domainV_core( domain, cptr_x, cptr_y, isizex_in, jsizex_in
         endif
         if(exchange_uv) then
            if( data_type == MPP_DOUBLE) then
-              call mpp_do_updateV_r8(x_r8(1:l_size,1:ntile),y_r8(1:l_size,1:ntile), domain, updatey, updatex, &
+              call do_updateV_r8(x_r8(1:l_size,1:ntile),y_r8(1:l_size,1:ntile), domain, updatey, updatex, &
                    ke, grid_offset_type, update_flags)
            else
-              call mpp_do_updateV_r4(x_r4(1:l_size,1:ntile),y_r4(1:l_size,1:ntile), domain, updatey, updatex, &
+              call do_updateV_r4(x_r4(1:l_size,1:ntile),y_r4(1:l_size,1:ntile), domain, updatey, updatex, &
                    ke, grid_offset_type, update_flags)
            endif
         else
            if( data_type == MPP_DOUBLE) then
-              call mpp_do_updateV_r8(x_r8(1:l_size,1:ntile),y_r8(1:l_size,1:ntile), domain, updatex, updatey, &
+              call do_updateV_r8(x_r8(1:l_size,1:ntile),y_r8(1:l_size,1:ntile), domain, updatex, updatey, &
                    ke,grid_offset_type, update_flags)
            else
-              call mpp_do_updateV_r4(x_r4(1:l_size,1:ntile),y_r4(1:l_size,1:ntile), domain, updatex, updatey, &
+              call do_updateV_r4(x_r4(1:l_size,1:ntile),y_r4(1:l_size,1:ntile), domain, updatex, updatey, &
                    ke,grid_offset_type, update_flags)
            endif
         end if
@@ -586,10 +591,10 @@ subroutine mpp_update_domain_5dv( fieldx, fieldy, domain, flags, gridtype, compl
   return
 end subroutine mpp_update_domain_5dv
 
-subroutine mpp_do_updateV_r8(xHold, yHold, domain, update_x, update_y, ke, gridtype, update_flags)
+subroutine do_updateV_r8(xHold, yHold, domain, update_x, update_y, ke, gridtype, update_flags)
 !updates data domain of 3D field whose computational domains have been computed
   type(holder_r8_type), intent(inout) :: xHold(:,:), yHold(:,:)
-  type(domain2d),          intent(in) :: domain
+  type(domain2d_private),  intent(in) :: domain
   type(overlapSpec),       intent(in) :: update_x, update_y
   integer,                 intent(in) :: ke
   integer,                 intent(in) :: gridtype
@@ -599,12 +604,12 @@ subroutine mpp_do_updateV_r8(xHold, yHold, domain, update_x, update_y, ke, gridt
 
 #include "do_updateV.inc"
 
-end subroutine mpp_do_updateV_r8
+end subroutine do_updateV_r8
 
-subroutine mpp_do_updateV_r4(xHold, yHold, domain, update_x, update_y, ke, gridtype, update_flags)
+subroutine do_updateV_r4(xHold, yHold, domain, update_x, update_y, ke, gridtype, update_flags)
 !updates data domain of 3D field whose computational domains have been computed
   type(holder_r4_type),    intent(inout) :: xHold(:,:), yHold(:,:)
-  type(domain2d),      intent(in)        :: domain
+  type(domain2d_private),  intent(in)    :: domain
   type(overlapSpec),   intent(in)        :: update_x, update_y
   integer,             intent(in)        :: ke
   integer, intent(in)                    :: gridtype
@@ -614,10 +619,10 @@ subroutine mpp_do_updateV_r4(xHold, yHold, domain, update_x, update_y, ke, gridt
 
 #include "do_updateV.inc"
 
-end subroutine mpp_do_updateV_r4
+end subroutine do_updateV_r4
 
 !######################################################################
-subroutine mpp_do_check_r8(sHold, check, ke, name)
+subroutine do_check_r8(sHold, check, ke, name)
    type(holder_r8_type),       intent(in) :: sHold(:,:)
    type(overlapSpec),          intent(in) :: check
    integer,                    intent(in) :: ke
@@ -626,10 +631,10 @@ subroutine mpp_do_check_r8(sHold, check, ke, name)
 
 #include "do_check.inc"
 
-end subroutine mpp_do_check_r8
+end subroutine do_check_r8
 
 !######################################################################
-subroutine mpp_do_check_r4( sHold, check, ke, name)
+subroutine do_check_r4( sHold, check, ke, name)
    type(holder_r4_type),       intent(in) :: sHold(:,:)
    type(overlapSpec),          intent(in) :: check
    integer,                    intent(in) :: ke
@@ -638,12 +643,12 @@ subroutine mpp_do_check_r4( sHold, check, ke, name)
 
 #include "do_check.inc"
 
-end subroutine mpp_do_check_r4
+end subroutine do_check_r4
 
 !######################################################################
-subroutine mpp_do_checkV_r8(xHold, yHold, domain, check_x, check_y, ke, flags, name)
+subroutine do_checkV_r8(xHold, yHold, domain, check_x, check_y, ke, flags, name)
    type(holder_r8_type), intent(inout)    :: xHold(:,:), yHold(:,:)
-   type(domain2d),      intent(in)        :: domain
+   type(domain2d_private),  intent(in)    :: domain
    type(overlapSpec),   intent(in)        :: check_x, check_y
    integer,             intent(in)        :: ke
    integer,             intent(in)        :: flags
@@ -652,11 +657,11 @@ subroutine mpp_do_checkV_r8(xHold, yHold, domain, check_x, check_y, ke, flags, n
 
 #include "do_checkV.inc"
 
-end subroutine mpp_do_checkV_r8
+end subroutine do_checkV_r8
 
-subroutine mpp_do_checkV_r4(xHold, yHold, domain, check_x, check_y, ke, flags, name)
+subroutine do_checkV_r4(xHold, yHold, domain, check_x, check_y, ke, flags, name)
    type(holder_r4_type), intent(inout)    :: xHold(:,:), yHold(:,:)
-   type(domain2d),      intent(in)        :: domain
+   type(domain2d_private),  intent(in)    :: domain
    type(overlapSpec),   intent(in)        :: check_x, check_y
    integer,             intent(in)        :: ke
    integer,             intent(in)        :: flags
@@ -665,5 +670,5 @@ subroutine mpp_do_checkV_r4(xHold, yHold, domain, check_x, check_y, ke, flags, n
 
 #include "do_checkV.inc"
 
-end subroutine mpp_do_checkV_r4
+end subroutine do_checkV_r4
 

@@ -330,7 +330,7 @@ use mpp_domains_mod,    only : mpp_update_domains, mpp_global_field, mpp_domain_
 use mpp_domains_mod,    only : operator( .NE. ), mpp_get_domain_shift, mpp_get_UG_compute_domains
 use mpp_domains_mod,    only : mpp_get_io_domain, mpp_domain_is_tile_root_pe, mpp_get_domain_tile_root_pe
 use mpp_domains_mod,    only : mpp_get_tile_id, mpp_get_tile_npes, mpp_get_io_domain_layout
-use mpp_domains_mod,    only : mpp_get_domain_name, mpp_get_domain_npes
+use mpp_domains_mod,    only : mpp_get_domain_name, mpp_get_domain_npes, mpp_domain_is_defined
 use mpp_parameter_mod,  only : MPP_FILL_DOUBLE,MPP_FILL_INT
 use mpp_mod,            only : mpp_chksum
 

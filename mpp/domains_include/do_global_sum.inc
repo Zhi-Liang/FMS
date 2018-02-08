@@ -18,7 +18,7 @@
      end do
      allocate( global2D( gxsize+ishift, gysize+jshift ) )
      global2D = 0
-     call mpp_global_field( domain, field2D, global2D, position=position, tile_count=tile)
+     call global_field_2d_private( domain, field2D, global2D, position=position, tile_count=tile)
       
      ioffset = domain%x(tile)%goffset*ishift; joffset = domain%y(tile)%goffset*jshift
      mygsum(tile) = sum(global2D(1:gxsize+ioffset,1:gysize+joffset))
@@ -34,7 +34,7 @@
               gsum(domain%tile_id(n)) = mygsum(n)
            end do
            !--- send the data to other pe if the current pe is the root pe of any tile
-           if( mpp_domain_is_tile_root_pe(domain) ) then
+           if( domain%pe == domain%tile_root_pe ) then
               do list = 1, nlist - 1
                  m = mod( domain%pos+list, nlist )
                  call mpp_send( mygsum(1), plen=ntile, to_pe=domain%list(m)%pe, tag=COMM_TAG_1 )

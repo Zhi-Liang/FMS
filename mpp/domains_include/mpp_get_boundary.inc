@@ -1,7 +1,7 @@
 !###############################################################################################
-subroutine mpp_get_boundary_core(domain, f_cptr_in, isize_in, jsize_in, ksize_in, data_type_in, &
+subroutine get_boundary_core(domain, f_cptr_in, isize_in, jsize_in, ksize_in, data_type_in, &
                                  b_cptr_in, b_size_in, position, complete, tile_count)
-  type(domain2D),    intent(in) :: domain
+  type(domain2D_private),    intent(in) :: domain
   type(C_PTR),       intent(in) :: f_cptr_in, b_cptr_in(:)
   integer,           intent(in) :: isize_in, jsize_in, ksize_in, data_type_in
   integer,           intent(in) :: b_size_in(:) 
@@ -50,9 +50,9 @@ subroutine mpp_get_boundary_core(domain, f_cptr_in, isize_in, jsize_in, ksize_in
   if(max_ntile>1) then
      if(ntile>MAX_TILES) then
         write( text,'(i2)' ) MAX_TILES
-        call mpp_error(FATAL,'mpp_get_boundary_core: MAX_TILES='//text//' is less than number of tiles on this pe.' )
+        call mpp_error(FATAL,'get_boundary_core: MAX_TILES='//text//' is less than number of tiles on this pe.' )
      endif
-     if(.NOT. present(tile_count) ) call mpp_error(FATAL, "MPP_GET_BOUNDARY_3D: "// &
+     if(.NOT. present(tile_count) ) call mpp_error(FATAL, "get_boundary_core: "// &
           "optional argument tile_count should be present when number of tiles on this pe is more than 1")
      tile = tile_count
   end if
@@ -61,23 +61,23 @@ subroutine mpp_get_boundary_core(domain, f_cptr_in, isize_in, jsize_in, ksize_in
   list = list+1
   if(list > MAX_DOMAIN_FIELDS)then
      write( text,'(i2)' ) MAX_DOMAIN_FIELDS
-     call mpp_error(FATAL,'mpp_get_boundary_core: MAX_DOMAIN_FIELDS='//text//' exceeded for group update.' )
+     call mpp_error(FATAL,'get_boundary_core: MAX_DOMAIN_FIELDS='//text//' exceeded for group update.' )
   endif
   if(b_size_in(1) > 0) then
      if(BTEST(domain%fold,NORTH)) call mpp_error(FATAL, &
            'mpp_get_boundary_core: ebuffer should not be present when north is folded')
-     if(.not. need_ebuffer) call mpp_error(FATAL,'mpp_get_boundary_core: ebuffer should not be present')
+     if(.not. need_ebuffer) call mpp_error(FATAL,'get_boundary_core: ebuffer should not be present')
   endif
   if(b_size_in(2) > 0) then
-     if(.not. need_sbuffer) call mpp_error(FATAL,'mpp_get_boundary_core: sbuffer should not be present')
+     if(.not. need_sbuffer) call mpp_error(FATAL,'get_boundary_core: sbuffer should not be present')
   end if
   if(b_size_in(3) > 0) then
-     if(.not. need_wbuffer) call mpp_error(FATAL,'mpp_get_boundary_core: wbuffer should not be present')
+     if(.not. need_wbuffer) call mpp_error(FATAL,'get_boundary_core: wbuffer should not be present')
   end if
   if(b_size_in(4) > 0) then
      if(BTEST(domain%fold,NORTH)) call mpp_error(FATAL, &
              'mpp_get_boundary_core: nbuffer should not be present when north is folded')
-     if(.not. need_nbuffer) call mpp_error(FATAL,'MPP_GET_BOUNDARY_3D: nbuffer should not be present')
+     if(.not. need_nbuffer) call mpp_error(FATAL,'get_boundary_core: nbuffer should not be present')
   end if
 
   if(data_type_in == MPP_DOUBLE) then
@@ -108,7 +108,7 @@ subroutine mpp_get_boundary_core(domain, f_cptr_in, isize_in, jsize_in, ksize_in
      set_mismatch = set_mismatch .OR. (data_type .NE. data_type_in)
      if(set_mismatch)then
         write( text,'(i2)' ) list
-        call mpp_error(FATAL,'mpp_get_boundary_core: Incompatible field at count '//text//' for group update.' )
+        call mpp_error(FATAL,'get_boundary_core: Incompatible field at count '//text//' for group update.' )
      endif
   endif
   if(is_complete) then
@@ -122,7 +122,7 @@ subroutine mpp_get_boundary_core(domain, f_cptr_in, isize_in, jsize_in, ksize_in
      bound => search_bound_overlap(domain, update_position)
      call mpp_get_domain_shift(domain, ishift, jshift, update_position)
      if(isize .NE. domain%x(1)%memory%size+ishift .OR. jsize .NE. domain%y(1)%memory%size+jshift ) &
-          call mpp_error(FATAL, "mpp_get_boundary_core: field is not on memory domain")
+          call mpp_error(FATAL, "get_boundary_core: field is not on memory domain")
      if(ASSOCIATED(bound)) then
         if(debug_message_passing) then
            recv(:) = b_size(:) > 0
@@ -130,19 +130,19 @@ subroutine mpp_get_boundary_core(domain, f_cptr_in, isize_in, jsize_in, ksize_in
            call check_message_size(domain, bound, send, recv)
         endif
         if(data_type == MPP_DOUBLE) then
-           call mpp_do_get_boundary_r8(f_r8(1:l_size,1:ntile), domain, bound, b_r8(:,1:l_size,1:ntile), &
+           call do_get_boundary_r8(f_r8(1:l_size,1:ntile), domain, bound, b_r8(:,1:l_size,1:ntile), &
                b_size, ksize)
         else if(data_type == MPP_FLOAT) then
-           call mpp_do_get_boundary_r4(f_r4(1:l_size,1:ntile), domain, bound, b_r4(:,1:l_size,1:ntile), &
+           call do_get_boundary_r4(f_r4(1:l_size,1:ntile), domain, bound, b_r4(:,1:l_size,1:ntile), &
                b_size, ksize)
         else
-           call mpp_error(FATAL, "mpp_get_boundary_core: only support 4-byte and 8-byte real, contact developer")
+           call mpp_error(FATAL, "get_oundary_core: only support 4-byte and 8-byte real, contact developer")
         endif
      endif
      l_size=0; b_size=0; isize=0;  jsize=0;  ksize=0
   end if
 
-end subroutine mpp_get_boundary_core
+end subroutine get_boundary_core
 
 !#######################################################################
 subroutine mpp_get_boundary_2d(field, domain, ebuffer, sbuffer, wbuffer, nbuffer, &
@@ -180,7 +180,7 @@ subroutine mpp_get_boundary_2d(field, domain, ebuffer, sbuffer, wbuffer, nbuffer
      b_size(4)  = 1
      b_cptr(4) = C_LOC(nbuffer)
   endif
-  call mpp_get_boundary_core(domain, f_cptr, isize, jsize, ksize, data_type, &
+  call get_boundary_core(domainList(domain%index), f_cptr, isize, jsize, ksize, data_type, &
                              b_cptr, b_size, position, complete, tile_count)
 
 end subroutine mpp_get_boundary_2d
@@ -221,15 +221,15 @@ subroutine mpp_get_boundary_3d(field, domain, ebuffer, sbuffer, wbuffer, nbuffer
      b_size(4)  = size(nbuffer,1)
      b_cptr(4) = C_LOC(nbuffer)
   endif
-  call mpp_get_boundary_core(domain, f_cptr, isize, jsize, ksize, data_type, &
+  call get_boundary_core(domainList(domain%index), f_cptr, isize, jsize, ksize, data_type, &
                              b_cptr, b_size, position, complete, tile_count)
 
 end subroutine mpp_get_boundary_3d
 
 !#######################################################################
-subroutine mpp_do_get_boundary_r8(f_hold, domain, bound, b_hold, b_size, ke)
+subroutine do_get_boundary_r8(f_hold, domain, bound, b_hold, b_size, ke)
   type(holder_r8_type),   intent(in) :: f_hold(:,:)
-  type(domain2D),         intent(in) :: domain
+  type(domain2D_private), intent(in) :: domain
   type(overlapSpec),      intent(in) :: bound
   type(bound_r8_type), intent(inout) :: b_hold(:,:,:)
   integer,                intent(in) :: b_size(:), ke
@@ -237,12 +237,12 @@ subroutine mpp_do_get_boundary_r8(f_hold, domain, bound, b_hold, b_size, ke)
 
 #include "do_get_boundary.inc"
 
-end subroutine mpp_do_get_boundary_r8
+end subroutine do_get_boundary_r8
 
 !#######################################################################
-subroutine mpp_do_get_boundary_r4(f_hold, domain, bound, b_hold, b_size, ke)
+subroutine do_get_boundary_r4(f_hold, domain, bound, b_hold, b_size, ke)
   type(holder_r4_type),   intent(in) :: f_hold(:,:)
-  type(domain2D),         intent(in) :: domain
+  type(domain2D_private), intent(in) :: domain
   type(overlapSpec),      intent(in) :: bound
   type(bound_r4_type), intent(inout) :: b_hold(:,:,:)
   integer,                intent(in) :: b_size(:), ke
@@ -250,13 +250,13 @@ subroutine mpp_do_get_boundary_r4(f_hold, domain, bound, b_hold, b_size, ke)
 
 #include "do_get_boundary.inc"
 
-end subroutine mpp_do_get_boundary_r4
+end subroutine do_get_boundary_r4
 
 !###############################################################################################
-subroutine mpp_get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsizex_in, ksizex_in, &
+subroutine get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsizex_in, ksizex_in, &
                                   isizey_in, jsizey_in,  ksizey_in, data_typex_in, data_typey_in,     &
                                   b_cptrx_in, b_cptry_in, b_sizex_in, b_sizey_in, flags, gridtype, complete, tile_count)
-  type(domain2D),    intent(in) :: domain
+  type(domain2D_private),    intent(in) :: domain
   type(C_PTR),       intent(in) :: f_cptrx_in, f_cptry_in 
   type(C_PTR),       intent(in) :: b_cptrx_in(:), b_cptry_in(:)
   integer,           intent(in) :: isizex_in, jsizex_in, ksizex_in, data_typex_in
@@ -319,7 +319,7 @@ subroutine mpp_get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsi
         write( text,'(i2)' ) MAX_TILES
         call mpp_error(FATAL,'mpp_get_boundaryV_core: MAX_TILES='//text//' is less than number of tiles on this pe.' )
      endif
-     if(.NOT. present(tile_count) ) call mpp_error(FATAL, "mpp_get_boundaryV_core: "// &
+     if(.NOT. present(tile_count) ) call mpp_error(FATAL, "get_boundaryV_core: "// &
           "optional argument tile_count should be present when number of tiles on this pe is more than 1")
      tile = tile_count
   end if
@@ -328,41 +328,41 @@ subroutine mpp_get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsi
   list = list+1
   if(list > MAX_DOMAIN_FIELDS)then
      write( text,'(i2)' ) MAX_DOMAIN_FIELDS
-     call mpp_error(FATAL,'mpp_get_boundaryV_core: MAX_DOMAIN_FIELDS='//text//' exceeded for group update.' )
+     call mpp_error(FATAL,'get_boundaryV_core: MAX_DOMAIN_FIELDS='//text//' exceeded for group update.' )
   endif
 
   if(b_sizex_in(1) >0) then
      if(BTEST(domain%fold,NORTH)) call mpp_error(FATAL, &
-             'mpp_get_boundaryV_core: ebufferx should not be present when north is folded')
-     if(.not. need_ebufferx) call mpp_error(FATAL,'mpp_get_boundaryV_core: ebufferx should not be present')
+             'get_boundaryV_core: ebufferx should not be present when north is folded')
+     if(.not. need_ebufferx) call mpp_error(FATAL,'get_boundaryV_core: ebufferx should not be present')
   end if
   if(b_sizex_in(2) >0) then
-     if(.not. need_sbufferx) call mpp_error(FATAL,'mpp_get_boundaryV_core: sbufferx should not be present')
+     if(.not. need_sbufferx) call mpp_error(FATAL,'get_boundaryV_core: sbufferx should not be present')
   end if
   if(b_sizex_in(3) >0) then
-     if(.not. need_wbufferx) call mpp_error(FATAL,'mpp_get_boundaryV_core: wbufferx should not be present')
+     if(.not. need_wbufferx) call mpp_error(FATAL,'get_boundaryV_core: wbufferx should not be present')
   end if
   if(b_sizex_in(4) >0) then
      if(BTEST(domain%fold,NORTH)) call mpp_error(FATAL, &
-             'mpp_get_boundaryV_core: nbufferx should not be present when north is folded')
-     if(.not. need_nbufferx) call mpp_error(FATAL,'mpp_get_boundaryV_core: nbufferx should not be present')
+             'get_boundaryV_core: nbufferx should not be present when north is folded')
+     if(.not. need_nbufferx) call mpp_error(FATAL,'get_boundaryV_core: nbufferx should not be present')
   end if
 
   if(b_sizey_in(1) >0) then
      if(BTEST(domain%fold,NORTH)) call mpp_error(FATAL, &
-             'mpp_get_boundaryV_core: ebuffery should not be present when north is folded')
-     if(.not. need_ebuffery) call mpp_error(FATAL,'mpp_get_boundaryV_core: ebuffery should not be present')
+             'get_boundaryV_core: ebuffery should not be present when north is folded')
+     if(.not. need_ebuffery) call mpp_error(FATAL,'get_boundaryV_core: ebuffery should not be present')
   end if
   if(b_sizey_in(2) >0) then
-     if(.not. need_sbuffery) call mpp_error(FATAL,'mpp_get_boundaryV_core: sbuffery should not be present')
+     if(.not. need_sbuffery) call mpp_error(FATAL,'get_boundaryV_core: sbuffery should not be present')
   end if
   if(b_sizey_in(3) >0) then
-     if(.not. need_wbuffery) call mpp_error(FATAL,'mpp_get_boundaryV_core: wbuffery should not be present')
+     if(.not. need_wbuffery) call mpp_error(FATAL,'get_boundaryV_core: wbuffery should not be present')
   end if
   if(b_sizey_in(4) >0) then
      if(BTEST(domain%fold,NORTH)) call mpp_error(FATAL, &
-             'mpp_get_boundaryV_core: nbuffery should not be present when north is folded')
-     if(.not. need_nbuffery) call mpp_error(FATAL,'mpp_get_boundaryV_core: nbuffery should not be present')
+             'get_boundaryV_core: nbuffery should not be present when north is folded')
+     if(.not. need_nbuffery) call mpp_error(FATAL,'get_boundaryV_core: nbuffery should not be present')
   end if
 
   if(data_typex_in == MPP_DOUBLE) then
@@ -389,9 +389,9 @@ subroutine mpp_get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsi
   if(present(gridtype)) grid_offset_type = gridtype
   if(list == 1 .AND. tile == 1 )then
      if(ksizex_in .NE. ksizey_in) call mpp_error(FATAL,  &
-          'mpp_get_boundaryV_core: mismatch of ksize between fieldx and fieldy')
+          'get_boundaryV_core: mismatch of ksize between fieldx and fieldy')
      if(data_typex_in .NE. data_typey_in) call mpp_error(FATAL,  &
-          'mpp_get_boundaryV_core: mismatch of data type between fieldx and fieldy')
+          'get_boundaryV_core: mismatch of data type between fieldx and fieldy')
      isize(1)=isizex_in; jsize(1)=jsizex_in; isize(2)=isizey_in; jsize(2)=jsizey_in
      ksize = ksizex_in; offset_type = grid_offset_type
      data_typex = data_typex_in; data_typey = data_typey_in
@@ -412,7 +412,7 @@ subroutine mpp_get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsi
      set_mismatch = set_mismatch .OR. (upflags .NE. update_flags)
      if(set_mismatch)then
         write( text,'(i2)' ) list
-        call mpp_error(FATAL,'mpp_get_boundaryV_core: Incompatible field at count '//text//' for group update.' )
+        call mpp_error(FATAL,'get_boundaryV_core: Incompatible field at count '//text//' for group update.' )
      endif
   endif
   if(is_complete) then
@@ -435,7 +435,7 @@ subroutine mpp_get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsi
         position_x = NORTH
         position_y = EAST
      case default
-        call mpp_error(FATAL, "mpp_get_boundaryV_core: invalid value of grid_offset_type")
+        call mpp_error(FATAL, "get_boundaryV_core: invalid value of grid_offset_type")
      end select
 
      boundx => search_bound_overlap(domain, position_x)
@@ -443,10 +443,10 @@ subroutine mpp_get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsi
 
      call mpp_get_domain_shift(domain, ishift, jshift, position_x)
      if(isize(1) .NE. domain%x(1)%memory%size+ishift .OR. jsize(1) .NE. domain%y(1)%memory%size+jshift ) &
-          call mpp_error(FATAL, "mpp_get_boundaryV_core: fieldx is not on memory domain")
+          call mpp_error(FATAL, "get_boundaryV_core: fieldx is not on memory domain")
      call mpp_get_domain_shift(domain, ishift, jshift, position_y)
      if(isize(2) .NE. domain%x(1)%memory%size+ishift .OR. jsize(2) .NE. domain%y(1)%memory%size+jshift ) &
-          call mpp_error(FATAL, "mpp_get_boundaryV_core: fieldy is not on memory domain")
+          call mpp_error(FATAL, "get_boundaryV_core: fieldy is not on memory domain")
      if(ASSOCIATED(boundx) ) then
         if(debug_message_passing) then
            recvx(:) = b_sizex(:) > 0
@@ -456,21 +456,21 @@ subroutine mpp_get_boundaryV_core(domain, f_cptrx_in, f_cptry_in, isizex_in, jsi
            call check_message_size_vector(domain, boundx, boundy, sendx, recvx, sendy, recvy)
         endif
         if(data_typex == MPP_DOUBLE) then
-           call mpp_do_get_boundary_r8v(fx_r8(1:l_size,1:ntile), fy_r8(1:l_size,1:ntile), domain, boundx, boundy, &
+           call do_get_boundary_r8v(fx_r8(1:l_size,1:ntile), fy_r8(1:l_size,1:ntile), domain, boundx, boundy, &
                 bx_r8(:,1:l_size,1:ntile), by_r8(:,1:l_size,1:ntile), b_sizex, &
                 b_sizey, ksize, update_flags, grid_offset_type)
         else if(data_typex == MPP_FLOAT) then
-           call mpp_do_get_boundary_r4v(fx_r4(1:l_size,1:ntile), fy_r4(1:l_size,1:ntile), domain, boundx, boundy, &
+           call do_get_boundary_r4v(fx_r4(1:l_size,1:ntile), fy_r4(1:l_size,1:ntile), domain, boundx, boundy, &
                 bx_r4(:,1:l_size,1:ntile), by_r4(:,1:l_size,1:ntile), b_sizex, &
                 b_sizey, ksize, update_flags, grid_offset_type)
         else
-           call mpp_error(FATAL, "mpp_get_boundaryV_core: only support 4-byte and 8-byte real, contact developer")
+           call mpp_error(FATAL, "get_boundaryV_core: only support 4-byte and 8-byte real, contact developer")
         endif
      endif
      l_size=0; isize=0;  jsize=0;  ksize=0; b_sizex=0; b_sizey=0
   end if
 
-end subroutine  mpp_get_boundaryV_core
+end subroutine  get_boundaryV_core
 
 !#######################################################################
 subroutine mpp_get_boundary_2dv(fieldx, fieldy, domain, ebufferx, sbufferx, wbufferx, nbufferx, &
@@ -533,7 +533,7 @@ subroutine mpp_get_boundary_2dv(fieldx, fieldy, domain, ebufferx, sbufferx, wbuf
      b_cptry(4) = C_LOC(nbuffery)
   endif  
 
-  call mpp_get_boundaryV_core(domain, f_cptrx, f_cptry, isizex, jsizex, ksizex, isizey, jsizey,  ksizey, &
+  call get_boundaryV_core(domainList(domain%index), f_cptrx, f_cptry, isizex, jsizex, ksizex, isizey, jsizey,  ksizey, &
                               data_typex, data_typey, b_cptrx, b_cptry, b_sizex, b_sizey, flags, gridtype, complete, tile_count)
 
   return
@@ -601,18 +601,18 @@ subroutine mpp_get_boundary_3dv(fieldx, fieldy, domain, ebufferx, sbufferx, wbuf
      b_cptry(4) = C_LOC(nbuffery)
   endif  
 
-  call mpp_get_boundaryV_core(domain, f_cptrx, f_cptry, isizex, jsizex, ksizex, isizey, jsizey, ksizey, data_typex, data_typey, &
-                              b_cptrx, b_cptry, b_sizex, b_sizey, flags, gridtype, complete, tile_count)
+  call get_boundaryV_core(domainList(domain%index), f_cptrx, f_cptry, isizex, jsizex, ksizex, isizey, jsizey, &
+           ksizey, data_typex, data_typey, b_cptrx, b_cptry, b_sizex, b_sizey, flags, gridtype, complete, tile_count)
 
   return
 
 end subroutine mpp_get_boundary_3dv
 
 !#######################################################################
-subroutine mpp_do_get_boundary_r8v(fx_hold, fy_hold, domain, boundx, boundy, bx_hold, by_hold,  &
+subroutine do_get_boundary_r8v(fx_hold, fy_hold, domain, boundx, boundy, bx_hold, by_hold,  &
                                    b_sizex, b_sizey, ke, flags, gridtype)
   type(holder_r8_type),   intent(in) :: fx_hold(:,:), fy_hold(:,:)
-  type(domain2D),         intent(in) :: domain
+  type(domain2D_private), intent(in) :: domain
   type(overlapSpec),      intent(in) :: boundx, boundy
   type(bound_r8_type), intent(inout) :: bx_hold(:,:,:), by_hold(:,:,:)
   integer,                intent(in) :: b_sizex(:), b_sizey(:), ke
@@ -622,13 +622,13 @@ subroutine mpp_do_get_boundary_r8v(fx_hold, fy_hold, domain, boundx, boundy, bx_
 
 #include "do_get_boundaryV.inc"
 
-end subroutine mpp_do_get_boundary_r8v
+end subroutine do_get_boundary_r8v
 
 !#######################################################################
-subroutine mpp_do_get_boundary_r4v(fx_hold, fy_hold, domain, boundx, boundy, bx_hold, by_hold,  &
+subroutine do_get_boundary_r4v(fx_hold, fy_hold, domain, boundx, boundy, bx_hold, by_hold,  &
                                    b_sizex, b_sizey, ke, flags, gridtype)
   type(holder_r4_type),   intent(in) :: fx_hold(:,:), fy_hold(:,:)
-  type(domain2D),         intent(in) :: domain
+  type(domain2D_private), intent(in) :: domain
   type(overlapSpec),      intent(in) :: boundx, boundy
   type(bound_r4_type), intent(inout) :: bx_hold(:,:,:), by_hold(:,:,:)
   integer,                intent(in) :: b_sizex(:), b_sizey(:), ke
@@ -638,7 +638,7 @@ subroutine mpp_do_get_boundary_r4v(fx_hold, fy_hold, domain, boundx, boundy, bx_
 
 #include "do_get_boundaryV.inc"
 
-end subroutine mpp_do_get_boundary_r4v
+end subroutine do_get_boundary_r4v
 
 
 

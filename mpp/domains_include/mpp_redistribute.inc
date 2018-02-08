@@ -1,6 +1,6 @@
-subroutine mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ke_in, data_type_in, &
+subroutine redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ke_in, data_type_in, &
       domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ke_out, data_type_out, complete, dc_handle, position )
-  type(domain2D), intent(in) :: domain_in, domain_out
+  type(domain2D_private), intent(in) :: domain_in, domain_out
   type(C_PTR),    intent(in) :: cptr_in, cptr_out
   integer(LONG_KIND), intent(in) :: f_loc_in, f_loc_out
   integer,        intent(in) :: isize_in, jsize_in, ke_in, data_type_in
@@ -75,7 +75,7 @@ subroutine mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_
   if(do_redist)then
      if(PRESENT(dc_handle))d_comm =>dc_handle  ! User has kept pointer to d_comm
      if(.not.ASSOCIATED(d_comm))then  ! d_comm needs initialization or lookup
-        d_comm =>mpp_redistribute_init_comm(domain_in,l_loc_in(1:l_size),domain_out,l_loc_out(1:l_size), &
+        d_comm =>redistribute_init_comm(domain_in,l_loc_in(1:l_size),domain_out,l_loc_out(1:l_size), &
              isize_in,jsize_in,ke_in,isize_out,jsize_out,ke_out)
         if(PRESENT(dc_handle))dc_handle =>d_comm  ! User wants to keep pointer to d_comm
      endif
@@ -92,10 +92,27 @@ subroutine mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_
      d_comm =>NULL()
   endif
 
-end subroutine mpp_redistribute_core
+end subroutine redistribute_core
 
-subroutine mpp_redistribute_2d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
-   type(domain2D), intent(in) :: domain_in, domain_out
+subroutine mpp_redistribute_2d( domainObj_in, field_in, domainObj_out, field_out, complete, dc_handle, position )
+   type(domain2D), intent(in) :: domainObj_in, domainObj_out
+   class(*), intent(in)  :: field_in (:,:)
+   class(*), intent(out) :: field_out(:,:)
+   logical, intent(in), optional :: complete
+   integer, intent(in), optional :: position
+   type(DomainCommunicator2D),pointer,optional :: dc_handle
+   type(domain2d_private), pointer :: domain_in=>NULL()
+   type(domain2d_private), pointer :: domain_out=>NULL()
+
+   domain_in => domainList(domainObj_in%index)
+   domain_out => domainList(domainObj_out%index)
+
+   call redistribute_2d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
+
+end subroutine mpp_redistribute_2d
+
+subroutine redistribute_2d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
+   type(domain2D_private), intent(in) :: domain_in, domain_out
    class(*), intent(in)  :: field_in (:,:)
    class(*), intent(out) :: field_out(:,:)
    logical, intent(in), optional :: complete
@@ -128,13 +145,31 @@ subroutine mpp_redistribute_2d( domain_in, field_in, domain_out, field_out, comp
    
    f_loc_in = LOC(field_in)
    f_loc_out = LOC(field_out)
-   call mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
+   call redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
         domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
    return
-end subroutine mpp_redistribute_2d
+end subroutine redistribute_2d
 
-subroutine mpp_redistribute_3d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
-   type(domain2D), intent(in) :: domain_in, domain_out
+!######################################################################
+subroutine mpp_redistribute_3d( domainObj_in, field_in, domainObj_out, field_out, complete, dc_handle, position )
+   type(domain2D), intent(in) :: domainObj_in, domainObj_out
+   class(*), intent(in)  :: field_in (:,:,:)
+   class(*), intent(out) :: field_out(:,:,:)
+   logical, intent(in), optional :: complete
+   integer, intent(in), optional :: position
+   type(DomainCommunicator2D),pointer,optional :: dc_handle
+   type(domain2d_private), pointer :: domain_in=>NULL()
+   type(domain2d_private), pointer :: domain_out=>NULL()
+
+   domain_in => domainList(domainObj_in%index)
+   domain_out => domainList(domainObj_out%index)
+
+   call redistribute_3d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
+
+end subroutine mpp_redistribute_3d
+
+subroutine redistribute_3d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
+   type(domain2D_private), intent(in) :: domain_in, domain_out
    class(*), intent(in)  :: field_in (:,:,:)
    class(*), intent(out) :: field_out(:,:,:)
    logical, intent(in), optional :: complete
@@ -167,14 +202,32 @@ subroutine mpp_redistribute_3d( domain_in, field_in, domain_out, field_out, comp
 
    f_loc_in = LOC(field_in)
    f_loc_out = LOC(field_out)
-   call mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
+   call redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
         domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
 
    return
-end subroutine mpp_redistribute_3d
+end subroutine redistribute_3d
 
-subroutine mpp_redistribute_4d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
-   type(domain2D), intent(in) :: domain_in, domain_out
+!######################################################################
+subroutine mpp_redistribute_4d( domainObj_in, field_in, domainObj_out, field_out, complete, dc_handle, position )
+   type(domain2D), intent(in) :: domainObj_in, domainObj_out
+   class(*), intent(in)  :: field_in (:,:,:,:)
+   class(*), intent(out) :: field_out(:,:,:,:)
+   logical, intent(in), optional :: complete
+   integer, intent(in), optional :: position
+   type(DomainCommunicator2D),pointer,optional :: dc_handle
+   type(domain2d_private), pointer :: domain_in=>NULL()
+   type(domain2d_private), pointer :: domain_out=>NULL()
+
+   domain_in => domainList(domainObj_in%index)
+   domain_out => domainList(domainObj_out%index)
+
+   call redistribute_4d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
+
+end subroutine mpp_redistribute_4d
+
+subroutine redistribute_4d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
+   type(domain2D_private), intent(in) :: domain_in, domain_out
    class(*), intent(in)  :: field_in (:,:,:,:)
    class(*), intent(out) :: field_out(:,:,:,:)
    logical, intent(in), optional :: complete
@@ -207,14 +260,32 @@ subroutine mpp_redistribute_4d( domain_in, field_in, domain_out, field_out, comp
 
    f_loc_in = LOC(field_in)
    f_loc_out = LOC(field_out)
-   call mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
+   call redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
         domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
 
    return
-end subroutine mpp_redistribute_4d
+end subroutine redistribute_4d
 
-subroutine mpp_redistribute_5d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
-   type(domain2D),    intent(in) :: domain_in, domain_out
+!######################################################################
+subroutine mpp_redistribute_5d( domainObj_in, field_in, domainObj_out, field_out, complete, dc_handle, position )
+   type(domain2D),    intent(in) :: domainObj_in, domainObj_out
+   class(*),         intent(in)  :: field_in (:,:,:,:,:)
+   class(*),         intent(out) :: field_out(:,:,:,:,:)
+   logical, intent(in), optional :: complete
+   integer, intent(in), optional :: position
+   type(DomainCommunicator2D),pointer,optional :: dc_handle
+   type(domain2d_private), pointer :: domain_in=>NULL()
+   type(domain2d_private), pointer :: domain_out=>NULL()
+
+   domain_in => domainList(domainObj_in%index)
+   domain_out => domainList(domainObj_out%index)
+
+   call redistribute_5d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
+
+end subroutine mpp_redistribute_5d
+
+subroutine redistribute_5d( domain_in, field_in, domain_out, field_out, complete, dc_handle, position )
+   type(domain2D_private),    intent(in) :: domain_in, domain_out
    class(*),         intent(in)  :: field_in (:,:,:,:,:)
    class(*),         intent(out) :: field_out(:,:,:,:,:)
    logical, intent(in), optional :: complete 
@@ -247,11 +318,11 @@ subroutine mpp_redistribute_5d( domain_in, field_in, domain_out, field_out, comp
 
    f_loc_in = LOC(field_in)
    f_loc_out = LOC(field_out)
-   call mpp_redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
+   call redistribute_core( domain_in, cptr_in, f_loc_in, isize_in, jsize_in, ksize_in, data_type_in, &
         domain_out, cptr_out, f_loc_out, isize_out, jsize_out, ksize_out, data_type_out, complete, dc_handle, position )
 
    return
-end subroutine mpp_redistribute_5d
+end subroutine redistribute_5d
 
 subroutine mpp_do_redistribute_r8(dHold_in, dHold_out, d_comm)
    type(holder_r8_type),    intent(in)    :: dHold_in(:)

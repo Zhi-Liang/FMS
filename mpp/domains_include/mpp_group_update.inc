@@ -1,7 +1,7 @@
 subroutine create_group_update_core(group, domain, cptr, fsize, data_type, &
                                     flags, position, whalo, ehalo, shalo, nhalo)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),       intent(inout)        :: domain  
+  type(domain2D_private),      intent(inout) :: domain  
   type(C_PTR),          intent(in)           :: cptr
   integer,              intent(in)           :: fsize(3), data_type
   integer,              intent(in), optional :: flags
@@ -89,15 +89,18 @@ subroutine create_group_update_core(group, domain, cptr, fsize, data_type, &
 
 end subroutine create_group_update_core
 
-subroutine mpp_create_group_update_2d(group, field, domain, flags, position, whalo, ehalo, shalo, nhalo)
+subroutine mpp_create_group_update_2d(group, field, domainObj, flags, position, whalo, ehalo, shalo, nhalo)
   type(mpp_group_update_type), intent(inout) :: group
   class(*),                    intent(inout) :: field(:,:)
-  type(domain2D),       intent(inout)        :: domain  
+  type(domain2D),       intent(inout)        :: domainObj
   integer,              intent(in), optional :: flags
   integer,              intent(in), optional :: position
   integer,              intent(in), optional :: whalo, ehalo, shalo, nhalo
   integer        :: fsize(3), data_type, nscalar
   type(C_PTR)    :: cptr
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)
 
   if(.not. is_contiguous(field)) call mpp_error(FATAL, "mpp_create_group_update_2d: field is not contiguous")        
   fsize(1) = size(field,1)
@@ -111,15 +114,18 @@ subroutine mpp_create_group_update_2d(group, field, domain, flags, position, wha
 
 end subroutine mpp_create_group_update_2d
 
-subroutine mpp_create_group_update_3d(group, field, domain, flags, position, whalo, ehalo, shalo, nhalo)
+subroutine mpp_create_group_update_3d(group, field, domainObj, flags, position, whalo, ehalo, shalo, nhalo)
   type(mpp_group_update_type), intent(inout) :: group
   class(*),                    intent(inout) :: field(:,:,:)
-  type(domain2D),              intent(inout) :: domain  
+  type(domain2D),              intent(inout) :: domainObj
   integer,              intent(in), optional :: flags
   integer,              intent(in), optional :: position
   integer,              intent(in), optional :: whalo, ehalo, shalo, nhalo ! specify halo region to be updated.
   integer     :: fsize(3), data_type
   type(C_PTR)       :: cptr
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)
 
   if(.not. is_contiguous(field)) call mpp_error(FATAL, "mpp_create_group_update_3d: field is not contiguous")
   fsize(1) = size(field,1)
@@ -132,15 +138,18 @@ subroutine mpp_create_group_update_3d(group, field, domain, flags, position, wha
 
 end subroutine mpp_create_group_update_3d
 
-subroutine mpp_create_group_update_4d(group, field, domain, flags, position, whalo, ehalo, shalo, nhalo)
+subroutine mpp_create_group_update_4d(group, field, domainObj, flags, position, whalo, ehalo, shalo, nhalo)
   type(mpp_group_update_type), intent(inout) :: group
   class(*),                    intent(inout) :: field(:,:,:,:)
-  type(domain2D),              intent(inout) :: domain  
+  type(domain2D),              intent(inout) :: domainObj
   integer,              intent(in), optional :: flags
   integer,              intent(in), optional :: position
   integer,              intent(in), optional :: whalo, ehalo, shalo, nhalo
   integer     :: fsize(3), data_type
   type(C_PTR)       :: cptr  
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)
 
   if(.not. is_contiguous(field)) call mpp_error(FATAL, "mpp_create_group_update_4d: field is not contiguous")
   fsize(1) = size(field,1)
@@ -157,7 +166,7 @@ end subroutine mpp_create_group_update_4d
 subroutine create_group_updateV_core( group, domain, cptrx, cptry, fsizex, fsizey, &
                                       data_typex, data_typey, flags, gridtype, whalo, ehalo, shalo, nhalo)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),              intent(inout) :: domain
+  type(domain2D_private),      intent(inout) :: domain
   type(C_PTR),      intent(in)               :: cptrx, cptry
   integer,                        intent(in) :: fsizex(3), data_typex
   integer,                        intent(in) :: fsizey(3), data_typey
@@ -280,15 +289,18 @@ subroutine create_group_updateV_core( group, domain, cptrx, cptry, fsizex, fsize
 
 end subroutine create_group_updateV_core
 
-subroutine mpp_create_group_update_2dv( group, fieldx, fieldy, domain, flags, gridtype, &
+subroutine mpp_create_group_update_2dv( group, fieldx, fieldy, domainObj, flags, gridtype, &
                                         whalo, ehalo, shalo, nhalo)
   type(mpp_group_update_type), intent(inout) :: group
   class(*),                    intent(inout) :: fieldx(:,:), fieldy(:,:)
-  type(domain2D),              intent(inout) :: domain
+  type(domain2D),              intent(inout) :: domainObj
   integer,          intent(in),     optional :: flags, gridtype
   integer,          intent(in),     optional :: whalo, ehalo, shalo, nhalo
   integer :: fsizex(3), fsizey(3), data_typex, data_typey
   type(C_PTR)       :: cptrx, cptry
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)
 
   if(.not. is_contiguous(fieldx)) call mpp_error(FATAL, "mpp_create_group_update_2dv: fieldx is not contiguous")
   if(.not. is_contiguous(fieldy)) call mpp_error(FATAL, "mpp_create_group_update_2dv: fieldy is not contiguous")
@@ -309,16 +321,19 @@ subroutine mpp_create_group_update_2dv( group, fieldx, fieldy, domain, flags, gr
 
 end subroutine mpp_create_group_update_2dv
 
-subroutine mpp_create_group_update_3dv( group, fieldx, fieldy, domain, flags, gridtype, &
+subroutine mpp_create_group_update_3dv( group, fieldx, fieldy, domainObj, flags, gridtype, &
                                         whalo, ehalo, shalo, nhalo)
   type(mpp_group_update_type), intent(inout) :: group
   class(*),                    intent(inout) :: fieldx(:,:,:), fieldy(:,:,:)
-  type(domain2D),              intent(inout) :: domain
+  type(domain2D),              intent(inout) :: domainObj
   integer,          intent(in),     optional :: flags, gridtype
   integer,          intent(in),     optional :: whalo, ehalo, shalo, nhalo
   integer     :: fsizex(3), fsizey(3), data_typex, data_typey
   type(C_PTR)       :: cptrx, cptry
-  
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)  
+
   if(.not. is_contiguous(fieldx)) call mpp_error(FATAL, "mpp_create_group_update_3dv: fieldx is not contiguous")
   if(.not. is_contiguous(fieldy)) call mpp_error(FATAL, "mpp_create_group_update_3dv: fieldy is not contiguous")
   fsizex(1) = size(fieldx,1)
@@ -339,16 +354,19 @@ subroutine mpp_create_group_update_3dv( group, fieldx, fieldy, domain, flags, gr
 
 end subroutine mpp_create_group_update_3dv
 
-subroutine mpp_create_group_update_4dv( group, fieldx, fieldy, domain, flags, gridtype, &
+subroutine mpp_create_group_update_4dv( group, fieldx, fieldy, domainObj, flags, gridtype, &
                                          whalo, ehalo, shalo, nhalo)
   type(mpp_group_update_type), intent(inout) :: group
   class(*),                    intent(inout) :: fieldx(:,:,:,:), fieldy(:,:,:,:)
-  type(domain2D),              intent(inout) :: domain
+  type(domain2D),              intent(inout) :: domainObj
   integer,          intent(in),     optional :: flags, gridtype
   integer,          intent(in),     optional :: whalo, ehalo, shalo, nhalo
   integer     :: fsizex(3), fsizey(3), data_typex, data_typey
   type(C_PTR)       :: cptrx, cptry
-  
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)  
+
   if(.not. is_contiguous(fieldx)) call mpp_error(FATAL, "mpp_create_group_update_4dv: fieldx is not contiguous")
   if(.not. is_contiguous(fieldy)) call mpp_error(FATAL, "mpp_create_group_update_4dv: fieldy is not contiguous")
   fsizex(1) = size(fieldx,1)
@@ -368,10 +386,13 @@ subroutine mpp_create_group_update_4dv( group, fieldx, fieldy, domain, flags, gr
 
 end subroutine mpp_create_group_update_4dv
 
-subroutine mpp_do_group_update(group, domain)
+subroutine mpp_do_group_update(group, domainObj)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),              intent(inout) :: domain  
+  type(domain2D),              intent(inout) :: domainObj 
   real(FLOAT_KIND), pointer :: buffer_r4(:) => NULL()
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)  
 
   if(num_nonblock_group_update .NE. 0) then
      call mpp_error(FATAL,"mpp_do_group_update: can not be called between mpp_start_group_update/mpp_complete_group_update")
@@ -392,13 +413,16 @@ subroutine mpp_do_group_update(group, domain)
 
 end subroutine mpp_do_group_update
 
-subroutine mpp_start_group_update(group, domain, reuse_buffer)
+subroutine mpp_start_group_update(group, domainObj, reuse_buffer)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),              intent(inout) :: domain  
+  type(domain2D),              intent(inout) :: domainObj  
   logical,  optional,          intent(in)    :: reuse_buffer
   logical :: reuse_buf_pos
   character(len=8)          :: text
   real(FLOAT_KIND), pointer :: buffer_r4(:) => NULL()
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)
 
   if(.not. group%initialized) call set_group_update(group,domain)
   reuse_buf_pos = .FALSE.
@@ -430,10 +454,13 @@ subroutine mpp_start_group_update(group, domain, reuse_buffer)
 
 end subroutine mpp_start_group_update
 
-subroutine mpp_complete_group_update(group, domain)
+subroutine mpp_complete_group_update(group, domainObj)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),              intent(inout) :: domain  
+  type(domain2D),              intent(inout) :: domainObj  
   real(FLOAT_KIND), pointer :: buffer_r4(:) => NULL()
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain => domainList(domainObj%index)
 
   if(num_nonblock_group_update < 1) call mpp_error(FATAL, &
     'mpp_start_group_update must be called before calling mpp_end_group_update')
@@ -456,7 +483,7 @@ end subroutine mpp_complete_group_update
 
 subroutine start_group_update_r8(group, domain, sHold, xHold, yHold, buffer)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),              intent(inout) :: domain
+  type(domain2D_private),      intent(inout) :: domain
   type(holder_r8_type),        intent(inout) :: sHold(:,:), xHold(:,:), yHold(:,:)
   real(DOUBLE_KIND),           intent(inout) :: buffer(mpp_domains_stack_size)  
 
@@ -482,7 +509,7 @@ end subroutine start_group_update_r8
 
 subroutine complete_group_update_r8(group, domain, sHold, xHold, yHold, buffer)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),              intent(inout) :: domain  
+  type(domain2D_private),      intent(inout) :: domain  
   type(holder_r8_type),        intent(inout) :: sHold(:,:), xHold(:,:), yHold(:,:)
   real(DOUBLE_KIND),           intent(inout) :: buffer(mpp_domains_stack_size)
 
@@ -501,7 +528,7 @@ end subroutine complete_group_update_r8
 
 subroutine start_group_update_r4(group, domain, sHold, xHold, yHold, buffer)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),              intent(inout) :: domain  
+  type(domain2D_private),      intent(inout) :: domain  
   type(holder_r4_type),        intent(inout) :: sHold(:,:), xHold(:,:), yHold(:,:)
   real(FLOAT_KIND),           intent(inout) :: buffer(mpp_domains_stack_size)
 
@@ -527,7 +554,7 @@ end subroutine start_group_update_r4
 
 subroutine complete_group_update_r4(group, domain, sHold, xHold, yHold, buffer)
   type(mpp_group_update_type), intent(inout) :: group
-  type(domain2D),              intent(inout) :: domain  
+  type(domain2D_private),      intent(inout) :: domain  
   type(holder_r4_type),        intent(inout) :: sHold(:,:), xHold(:,:), yHold(:,:)
   real(FLOAT_KIND),           intent(inout) :: buffer(mpp_domains_stack_size)
 
@@ -780,7 +807,7 @@ function mpp_start_update_domain_2d( field, domain, flags, position, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
-  if(domain%max_ntile_pe>1) &
+  if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_2d: do not support multiple tile per pe, contact developer' )
   if(new_update) then
      num_update = num_update + 1
@@ -824,7 +851,7 @@ function mpp_start_update_domain_3d( field, domain, flags, position, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
-  if(domain%max_ntile_pe>1) &
+  if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_3d: do not support multiple tile per pe, contact developer' )
   if(new_update) then
      num_update = num_update + 1
@@ -867,7 +894,7 @@ function mpp_start_update_domain_4D( field, domain, flags, position, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
-  if(domain%max_ntile_pe>1) &
+  if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_3d: do not support multiple tile per pe, contact developer' )
   if(new_update) then
      current_id_update = current_id_update + 1
@@ -1003,7 +1030,7 @@ function mpp_start_update_domain_2dv( fieldx, fieldy, domain, flags, gridtype, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
-  if(domain%max_ntile_pe>1) &
+  if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_2dv: do not support multiple tile per pe, contact developer' )
   if(new_update) then
      num_update = num_update + 1
@@ -1048,7 +1075,7 @@ function mpp_start_update_domain_3dv( fieldx, fieldy, domain, flags, gridtype, &
   logical, save              :: new_update = .true.
 
 
-  if(domain%max_ntile_pe>1) &
+  if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_3dv: do not support multiple tile per pe, contact developer' )
   if(new_update) then
      num_update = num_update + 1
@@ -1092,7 +1119,7 @@ function mpp_start_update_domain_4dv( fieldx, fieldy, domain, flags, gridtype, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
-  if(domain%max_ntile_pe>1) &
+  if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_4dv: do not support multiple tile per pe, contact developer' )
   if(new_update) then
      num_update = num_update + 1

@@ -351,7 +351,7 @@
       integer :: is, ie, isg, ieg
       integer :: istat
       logical :: domain_exist
-      type(domain2d), pointer :: io_domain => NULL()
+      type(domain2d) :: io_domain
 
 !      call mpp_clock_begin(mpp_write_clock)
       !--- the shift and cartesian information is needed in mpp_write_meta_field from all the pe.
@@ -365,7 +365,7 @@
          domain_exist = .true.
          call mpp_get_global_domain( domain, isg, ieg )
          if(mpp_file(unit)%io_domain_exist) then
-            io_domain => mpp_get_io_domain(mpp_file(unit)%domain)
+            io_domain = mpp_get_io_domain(mpp_file(unit)%domain)
             if(axis%cartesian=='X') then
                call mpp_get_global_domain( io_domain, xbegin=is, xend=ie)
             else if(axis%cartesian=='Y') then

@@ -446,18 +446,30 @@
 
   !################################################################################
   !--- define the IO domain. 
-  subroutine mpp_define_io_domain(domain, io_layout)
-    type(domain2D), intent(inout) :: domain
+  subroutine mpp_define_io_domain(domainObj, io_layout)
+    type(domain2D), intent(inout) :: domainObj
     integer,        intent(in   ) :: io_layout(2)
     integer                       :: layout(2)
     integer                       :: npes_in_group
-    type(domain2D), pointer       :: io_domain=>NULL() 
+    type(domain2D_private), pointer :: io_domain=>NULL() 
     integer                       :: i, j, n, m
     integer                       :: ipos, jpos, igroup, jgroup
     integer                       :: ipos_beg, ipos_end, jpos_beg, jpos_end
     integer                       :: whalo, ehalo, shalo, nhalo
     integer                       :: npes_x, npes_y, ndivx, ndivy
     integer, allocatable          :: posarray(:,:)
+    type(domain2d_private), pointer :: domain=>NULL()
+    type(domain2d)                :: io_domainObj
+
+    call check_domain2d_index(domainObj, "mpp_define_io_domain")
+    domain => domainList(domainObj%index)
+    
+    if(domain%io_domain_index .NE. 0) call mpp_error(FATAL, 'mpp_define_io_domain: domain%io_domain_index .NE. 0')
+    cur_domain_index = cur_domain_index+1
+    domain%io_domain_index = cur_domain_index
+    io_domainObj%index = cur_domain_index
+    call check_domain2d_index(io_domainObj, "mpp_define_io_domain io_domain")
+    io_domain => domainList(cur_domain_index)
 
     if(io_layout(1) * io_layout(2) .LE. 0) then
        call mpp_error(NOTE,  &
@@ -469,9 +481,6 @@
     layout(1) = size(domain%x(1)%list(:))
     layout(2) = size(domain%y(1)%list(:)) 
 
-    if(ASSOCIATED(domain%io_domain)) call mpp_error(FATAL, &
-       "mpp_domains_define.inc(mpp_define_io_domain): io_domain is already defined")
-
     if(mod(layout(1), io_layout(1)) .NE. 0) call mpp_error(FATAL, &
        "mpp_domains_define.inc(mpp_define_io_domain): "//trim(domain%name)//" domain layout(1) must be divided by io_layout(1)")    
     if(mod(layout(2), io_layout(2)) .NE. 0) call mpp_error(FATAL, &
@@ -480,9 +489,7 @@
        "mpp_domains_define.inc(mpp_define_io_domain): "//trim(domain%name)// &
        ": multiple tile per pe is not supported yet for this routine")
  
-    allocate(domain%io_domain)
     domain%io_layout = io_layout
-    io_domain => domain%io_domain
     ! Find how many processors are in the group with the consideration that some of the region maybe masked out.
     npes_x = layout(1)/io_layout(1)
     npes_y = layout(2)/io_layout(2)
@@ -599,13 +606,13 @@
   !  <IN NAME="maskmap" TYPE="logical" DIM="(:,:)"></IN>
   !  <IN NAME="name" TYPE="character(len=*)"></IN>
   ! </SUBROUTINE>
-  subroutine mpp_define_domains2D( global_indices, layout, domain, pelist, xflags, yflags,    &
+  subroutine mpp_define_domains2D( global_indices, layout, domainObj, pelist, xflags, yflags,    &
          xhalo, yhalo, xextent, yextent, maskmap, name, symmetry,  memory_size,               &
          whalo, ehalo, shalo, nhalo, is_mosaic, tile_count, tile_id, complete)
     !define 2D data and computational domain on global rectilinear cartesian domain (isg:ieg,jsg:jeg) and assign them to PEs
     integer,          intent(in)           :: global_indices(:) !(/ isg, ieg, jsg, jeg /)
     integer,          intent(in)           :: layout(:)
-    type(domain2D),   intent(inout)        :: domain
+    type(domain2D),   intent(inout)        :: domainObj
     integer,          intent(in), optional :: pelist(0:)
     integer,          intent(in), optional :: xflags, yflags, xhalo, yhalo
     integer,          intent(in), optional :: xextent(0:), yextent(0:)
@@ -639,6 +646,17 @@
     type(overlapSpec), pointer :: check_T => NULL()
     integer              :: outunit
     logical              :: send(8), recv(8)
+    type(domain2d_private), pointer :: domain=>NULL()
+
+    from_mosaic = .false.
+    if(present(is_mosaic)) from_mosaic = is_mosaic
+    if(.not. from_mosaic) then
+       if(domainObj%index .NE. 0) call mpp_error(FATAL, "MPP_DEFINE_DOMAINS2D: domainObj%index should be zero")
+       cur_domain_index = cur_domain_index+1
+       domainObj%index = cur_domain_index
+    endif
+    call check_domain2d_index(domainObj, "MPP_DEFINE_DOMAINS2D")
+    domain => domainList(domainObj%index)
 
     outunit = stdout()
     if( .NOT.module_is_initialized )call mpp_error( FATAL, 'MPP_DEFINE_DOMAINS2D: You must first call mpp_domains_init.' )
@@ -655,8 +673,6 @@
     ndivx = layout(1); ndivy = layout(2)
     isg = global_indices(1); ieg = global_indices(2); jsg = global_indices(3); jeg = global_indices(4)
 
-    from_mosaic = .false.
-    if(present(is_mosaic)) from_mosaic = is_mosaic
     is_complete = .true.
     if(present(complete)) is_complete = complete
     tile = 1
@@ -1058,7 +1074,7 @@ end subroutine mpp_define_domains2D
 
 !#####################################################################
 subroutine check_message_size(domain, update, send, recv, position, name)
-  type(domain2d),       intent(in) :: domain 
+  type(domain2d_private), intent(in) :: domain 
   type(overlapSpec),    intent(in) :: update
   logical,              intent(in) :: send(:)
   logical,              intent(in) :: recv(:)
@@ -1129,7 +1145,7 @@ end subroutine check_message_size
 
 
 subroutine check_message_size_vector(domain, update_x, update_y, sendx, recvx, sendy_in, recvy_in)
-   type(domain2d),       intent(in) :: domain
+   type(domain2d_private),       intent(in) :: domain
    type(overlapSpec),    intent(in) :: update_x, update_y
    logical,              intent(in) :: sendx(:)
    logical,              intent(in) :: recvx(:)
@@ -1280,14 +1296,14 @@ end subroutine check_message_size_vector
 !??? how to specify pelist, we may use two dimensional variable pelist to represent.
 !z1l: We assume the tilelist are in always limited to 1, 2, ... num_tile. If we want 
 !     to remove this limitation, we need to add one more argument tilelist.
-  subroutine mpp_define_mosaic( global_indices, layout, domain, num_tile, num_contact, tile1, tile2,      &
+  subroutine mpp_define_mosaic( global_indices, layout, domainObj, num_tile, num_contact, tile1, tile2,      &
                                 istart1, iend1, jstart1, jend1, istart2, iend2, jstart2, jend2, pe_start, &
                                 pe_end, pelist, whalo, ehalo, shalo, nhalo, xextent, yextent,             &
                                 maskmap, name, memory_size, symmetry, xflags, yflags, tile_id )
     integer,          intent(in)           :: global_indices(:,:)  ! The size of first indice is 4, (/ isg, ieg, jsg, jeg /)
                                                                    ! The size of second indice is number of tiles in mosaic.
     integer,          intent(in)           :: layout(:,:)
-    type(domain2D),   intent(inout)        :: domain
+    type(domain2D),   intent(inout)        :: domainObj
     integer,          intent(in)           :: num_tile             ! number of tiles in the mosaic
     integer,          intent(in)           :: num_contact          ! number of contact region between tiles.
     integer,          intent(in)           :: tile1(:), tile2(:)   ! tile number
@@ -1319,6 +1335,13 @@ end subroutine check_message_size_vector
     real,    allocatable :: refine1(:), refine2(:)
     integer              :: outunit
     logical              :: send(8), recv(8)
+    type(domain2d_private), pointer :: domain=>NULL()
+
+    if(domainObj%index .NE. 0) call mpp_error(FATAL, "mpp_define_mosaic: domainObj%index should be zero")
+    cur_domain_index = cur_domain_index+1
+    domainObj%index = cur_domain_index
+    call check_domain2d_index(domainObj, "mpp_define_mosaic")
+    domain => domainList(cur_domain_index)
 
     outunit = stdout()
     !--- the size of first indice of global_indices must be 4.
@@ -1509,12 +1532,12 @@ end subroutine check_message_size_vector
                    "mpp_domains_define: for one tile mosaic, invalid boundary contact")
              end if
           end do
-          call mpp_define_domains(global_indices(:,n), layout(:,n), domain, pelist=pelist_tile, xflags = flags_x, &
+          call mpp_define_domains(global_indices(:,n), layout(:,n), domainObj, pelist=pelist_tile, xflags = flags_x, &
                                   yflags = flags_y, whalo=whalo, ehalo=ehalo, shalo=shalo, nhalo=nhalo,           &
                                   xextent=xext, yextent=yext, maskmap=mask, name=name, symmetry=is_symmetry,      &
                                   memory_size = memory_size, is_mosaic = .true., tile_id=tile_id_local(n))
        else
-          call mpp_define_domains(global_indices(:,n), layout(:,n), domain, pelist=pelist_tile,                   &
+          call mpp_define_domains(global_indices(:,n), layout(:,n), domainObj, pelist=pelist_tile,                   &
                                   whalo=whalo, ehalo=ehalo, shalo=shalo, nhalo=nhalo, xextent=xext, yextent=yext, &
                                   maskmap=mask, name=name, symmetry=is_symmetry, memory_size = memory_size,       &
                                   is_mosaic = .true., tile_count = tile_count(pe_start(n)), tile_id=tile_id_local(n),   &
@@ -1652,7 +1675,7 @@ end subroutine check_message_size_vector
     !computes remote domain overlaps
     !assumes only one in each direction
     !will calculate the overlapping for T,E,C,N-cell seperately.
-    type(domain2D), intent(inout) :: domain
+    type(domain2D_private), intent(inout) :: domain
     type(overlapSpec), intent(inout), pointer :: update
     type(overlapSpec), intent(inout), pointer :: check
     integer, intent(in)           :: position, ishift, jshift
@@ -2471,7 +2494,7 @@ end subroutine check_message_size_vector
   subroutine fill_overlap_send_nofold(overlap, domain, m, is, ie, js, je, isc, iec, jsc, jec, &
                                     isg, ieg, dir, ioff, is_cyclic, folded, symmetry) 
     type(overlap_type), intent(inout) :: overlap
-    type(domain2d),     intent(inout) :: domain
+    type(domain2d_private), intent(inout) :: domain
     integer,            intent(in   ) :: m, is, ie, js, je
     integer,            intent(in   ) :: isc, iec, jsc, jec
     integer,            intent(in   ) :: isg, ieg, dir, ioff
@@ -2495,7 +2518,7 @@ end subroutine check_message_size_vector
   subroutine fill_overlap_send_fold(overlap, domain, m, is, ie, js, je, isc, iec, jsc, jec, &
                                     isg, ieg, dir, ishift, position, ioff, middle, symmetry) 
     type(overlap_type), intent(inout) :: overlap
-    type(domain2d),     intent(inout) :: domain
+    type(domain2d_private), intent(inout) :: domain
     integer,            intent(in   ) :: m, is, ie, js, je
     integer,            intent(in   ) :: isc, iec, jsc, jec
     integer,            intent(in   ) :: isg, ieg, dir, ishift, position, ioff, middle
@@ -2556,7 +2579,7 @@ end subroutine check_message_size_vector
   subroutine fill_overlap_recv_nofold(overlap, domain, m, is, ie, js, je, isd, ied, jsd, jed, &
                                     isg, ieg, dir, ioff, is_cyclic, folded, symmetry) 
     type(overlap_type), intent(inout) :: overlap
-    type(domain2d),     intent(inout) :: domain
+    type(domain2d_private), intent(inout) :: domain
     integer,            intent(in   ) :: m, is, ie, js, je
     integer,            intent(in   ) :: isd, ied, jsd, jed
     integer,            intent(in   ) :: isg, ieg, dir, ioff
@@ -2592,7 +2615,7 @@ end subroutine check_message_size_vector
   subroutine fill_overlap_recv_fold(overlap, domain, m, is, ie, js, je, isd, ied, jsd, jed, &
                                     isg, ieg, dir, ishift, position, ioff, middle, symmetry) 
     type(overlap_type), intent(inout) :: overlap
-    type(domain2d),     intent(inout) :: domain
+    type(domain2d_private), intent(inout) :: domain
     integer,            intent(in   ) :: m, is, ie, js, je
     integer,            intent(in   ) :: isd, ied, jsd, jed
     integer,            intent(in   ) :: isg, ieg, dir, ishift, position, ioff, middle
@@ -2666,7 +2689,7 @@ end subroutine check_message_size_vector
     !computes remote domain overlaps
     !assumes only one in each direction
     !will calculate the overlapping for T,E,C,N-cell seperately.
-    type(domain2D), intent(inout) :: domain
+    type(domain2D_private), intent(inout) :: domain
     integer, intent(in)           :: position, ishift, jshift
 
     integer                          :: i, m, n, nlist, tMe, tNbr, dir
@@ -3297,7 +3320,7 @@ end subroutine check_message_size_vector
     !computes remote domain overlaps
     !assumes only one in each direction
     !will calculate the overlapping for T,E,C,N-cell seperately.
-    type(domain2D), intent(inout) :: domain
+    type(domain2D_private), intent(inout) :: domain
     integer, intent(in)           :: position, ishift, jshift
 
     integer                          :: j, m, n, nlist, tMe, tNbr, dir
@@ -3908,7 +3931,7 @@ end subroutine check_message_size_vector
     !assumes only one in each direction
     !will calculate the overlapping for T,E,C,N-cell seperately.
     !here assume fold-east and y-cyclic boundary condition
-    type(domain2D), intent(inout) :: domain
+    type(domain2D_private), intent(inout) :: domain
     integer, intent(in)           :: position, ishift, jshift
 
     integer                          :: j, m, n, nlist, tMe, tNbr, dir
@@ -4594,7 +4617,7 @@ end subroutine check_message_size_vector
   ! region, the overlapping is specified through list of points, not through rectangular.
   ! But will return back to solve this problem in the future.
   subroutine set_overlaps(domain, overlap_in, overlap_out, whalo_out, ehalo_out, shalo_out, nhalo_out)
-    type(domain2d),    intent(in)    :: domain
+    type(domain2d_private),    intent(in)    :: domain
     type(overlapSpec), intent(in)    :: overlap_in
     type(overlapSpec), intent(inout) :: overlap_out
     integer,           intent(in)    :: whalo_out, ehalo_out, shalo_out, nhalo_out
@@ -4882,7 +4905,7 @@ end subroutine check_message_size_vector
   subroutine define_contact_point( domain, position, num_contact, tile1, tile2, align1, align2, &
        refine1, refine2, istart1, iend1, jstart1, jend1, istart2, iend2, jstart2, jend2,        &
        isgList, iegList, jsgList, jegList )
-    type(domain2D),     intent(inout) :: domain
+    type(domain2D_private), intent(inout) :: domain
     integer,               intent(in) :: position          
     integer,               intent(in) :: num_contact      ! number of contact regions
     integer, dimension(:), intent(in) :: tile1, tile2     ! tile number
@@ -5543,7 +5566,7 @@ end subroutine fill_contact
 !############################################################################
 ! this routine sets the overlapping between tiles for E,C,N-cell based on T-cell overlapping
 subroutine set_contact_point(domain, position)
-  type(domain2d), intent(inout) :: domain
+  type(domain2d_private), intent(inout) :: domain
   integer,           intent(in) :: position
 
   integer                         :: ishift, jshift, nlist, list, m, n
@@ -5788,7 +5811,7 @@ end subroutine set_contact_point
 !--- done on current pe for east boundary for E-cell, north boundary for N-cell, 
 !--- East and North boundary for C-cell
 subroutine set_check_overlap( domain, position )
-type(domain2d),    intent(in) :: domain
+type(domain2d_private), intent(in) :: domain
 integer,           intent(in) :: position
 integer                       :: nlist, m, n
 integer, parameter            :: MAXCOUNT = 100
@@ -5969,7 +5992,7 @@ end subroutine set_check_overlap
 !#############################################################################
 !--- set up the overlapping for boundary if the domain is symmetry.
 subroutine set_bound_overlap( domain, position )
-  type(domain2d), intent(inout) :: domain
+  type(domain2d_private), intent(inout) :: domain
   integer,        intent(in)    :: position
   integer                       :: m, n, l, count, dr, tMe
   integer, parameter            :: MAXCOUNT = 100
@@ -7172,15 +7195,19 @@ end subroutine mpp_modify_domain1D
 !   <INOUT NAME="domain_out" TYPE="type(domain2D)" > </INOUT>
 
 ! <PUBLICROUTINE>
-subroutine mpp_modify_domain2D(domain_in, domain_out, isc, iec, jsc, jec, isg, ieg, jsg, jeg, whalo, ehalo, shalo, nhalo)
+subroutine mpp_modify_domain2D(domainObj_in, domainObj_out, isc, iec, jsc, jec, isg, ieg, jsg, jeg, whalo, ehalo, shalo, nhalo)
   ! </PUBLICROUTINE>
-type(domain2D), intent(in)    :: domain_in
-type(domain2D), intent(inout) :: domain_out
+type(domain2D), intent(in)    :: domainObj_in
+type(domain2D), intent(inout) :: domainObj_out
 integer, intent(in), optional :: isc, iec, jsc, jec
 integer, intent(in), optional :: isg, ieg, jsg, jeg
 integer, intent(in), optional :: whalo, ehalo, shalo, nhalo
 integer                       :: global_indices(4), layout(2)
 integer                       :: xflag, yflag, nlist, i
+type(domain2d_private), pointer :: domain_in=>NULL()
+type(domain2d_private), pointer :: domain_out=>NULL()
+
+domain_in => domainList(domainObj_in%index)
 
 if(present(whalo) .or. present(ehalo) .or. present(shalo) .or. present(nhalo) ) then
    ! get the global indices of the input domain
@@ -7197,17 +7224,20 @@ if(present(whalo) .or. present(ehalo) .or. present(shalo) .or. present(nhalo) ) 
  if(domain_in%y(1)%cyclic) yflag = yflag + CYCLIC_GLOBAL_DOMAIN
  if(domain_in%y(1)%data%is_global) yflag = yflag + GLOBAL_DATA_DOMAIN
 
- call mpp_define_domains( global_indices, layout, domain_out, pelist = domain_in%list(:)%pe, &
+ call mpp_define_domains( global_indices, layout, domainObj_out, pelist = domain_in%list(:)%pe, &
       xflags = xflag, yflags = yflag,  whalo = whalo, ehalo = ehalo,     &
       shalo = shalo, nhalo = nhalo,                                      &
       xextent = domain_in%x(1)%list(:)%compute%size,                     &
       yextent = domain_in%y(1)%list(:)%compute%size,                     &
       symmetry=domain_in%symmetry,                                       &
       maskmap = domain_in%pearray .NE. NULL_PE )
+
+ domain_out => domainList(domainObj_out%index)
  domain_out%ntiles = domain_in%ntiles
  domain_out%tile_id = domain_in%tile_id
 else    
- call mpp_define_null_domain(domain_out)
+ call mpp_define_null_domain(domainObj_out)
+ domain_out => domainList(domainObj_out%index)
  nlist = size(domain_in%list(:))
  allocate(domain_out%list(0:nlist-1) )
  do i = 0, nlist-1
@@ -7239,8 +7269,14 @@ end subroutine mpp_define_null_domain1D
 !#####################################################################
 
 
-subroutine mpp_define_null_domain2D(domain)
-type(domain2D), intent(inout) :: domain
+subroutine mpp_define_null_domain2D(domainObj)
+type(domain2D), intent(inout) :: domainObj
+type(domain2d_private), pointer :: domain=>NULL()
+
+cur_domain_index = cur_domain_index+1
+domainObj%index = cur_domain_index
+call check_domain2d_index(domainObj, "mpp_define_null_domain2D")
+domain => domainList(domainObj%index)
 
 allocate(domain%x(1), domain%y(1), domain%tile_id(1))
 call mpp_define_null_domain(domain%x(1))
@@ -7264,25 +7300,29 @@ end subroutine mpp_deallocate_domain1D
 
 !####################################################################
 
-subroutine mpp_deallocate_domain2D(domain)
-  type(domain2D), intent(inout) :: domain
+subroutine mpp_deallocate_domain2D(domainObj)
+  type(domain2D), intent(inout) :: domainObj
+  type(domain2d_private), pointer :: domain=>NULL()
 
+  domain=>domainList(domainObj%index)
+  domain%initialized = .false.
   call deallocate_domain2D_local(domain)
-  if(ASSOCIATED(domain%io_domain) ) then
-     call deallocate_domain2D_local(domain%io_domain) 
-     deallocate(domain%io_domain)
+  if(domain%io_domain_index > 0 ) then
+     call deallocate_domain2D_local(domainList(domain%io_domain_index)) 
   endif
+  domainObj%index = 0
 
 end subroutine mpp_deallocate_domain2D
 
 !##################################################################
 
 subroutine deallocate_domain2D_local(domain)
-type(domain2D), intent(inout) :: domain
+type(domain2D_private), intent(inout) :: domain
 integer :: i, ntileMe
 
 ntileMe = size(domain%x(:))
 
+domain%io_domain_index = 0
 if(ASSOCIATED(domain%pearray))deallocate(domain%pearray)
 do i = 1, ntileMe
    call mpp_deallocate_domain1D(domain%x(i))
@@ -7697,7 +7737,7 @@ end subroutine expand_check_overlap_list
 
 !###############################################################################
 subroutine check_overlap_pe_order(domain, overlap, name)
-  type(domain2d),    intent(in) :: domain
+  type(domain2d_private), intent(in) :: domain
   type(overlapSpec), intent(in) :: overlap
   character(len=*),  intent(in) :: name
   integer                       :: m
@@ -7801,7 +7841,7 @@ end subroutine set_domain_comm_inf
 
 
 subroutine reset_update_index(domain, update)
-  type(domain2d),    intent(inout) :: domain
+  type(domain2d_private),    intent(inout) :: domain
   type(overlapSpec), intent(inout) :: update 
   integer :: isd, jsd, m, n
 
@@ -7827,3 +7867,12 @@ subroutine reset_update_index(domain, update)
   enddo
 
 end subroutine reset_update_index
+
+
+function mpp_domain_is_defined(domain)
+   type(domain2d), intent(in) :: domain
+   logical                    :: mpp_domain_is_defined
+
+   mpp_domain_is_defined = domain%index > 0
+
+end function mpp_domain_is_defined

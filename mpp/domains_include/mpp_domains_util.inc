@@ -67,11 +67,16 @@
     return
   end function mpp_domain1D_ne
 
-  function mpp_domain2D_eq( a, b )
+  function mpp_domain2D_eq( aObj, bObj )
     logical                    :: mpp_domain2D_eq
-    type(domain2D), intent(in) :: a, b
+    type(domain2D), intent(in) :: aObj, bObj
     integer                    :: nt, n
-   
+    type(domain2D_private), pointer :: a=>NULL()
+    type(domain2D_private), pointer :: b=>NULL()
+    
+    a=>domainList(aObj%index)
+    b=>domainList(bObj%index)
+
     mpp_domain2d_eq = size(a%x(:)) .EQ. size(b%x(:))
     nt = size(a%x(:))
     do n = 1, nt
@@ -158,10 +163,23 @@
     return
   end subroutine mpp_get_memory_domain1D
 
-  !#####################################################################
   subroutine mpp_get_compute_domain2D( domain, xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size, &
        x_is_global, y_is_global, tile_count, position )
     type(domain2D),     intent(in) :: domain
+    integer, intent(out), optional :: xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size
+    logical, intent(out), optional :: x_is_global, y_is_global
+    integer, intent(in),  optional :: tile_count, position
+    integer                        :: tile, ishift, jshift
+
+    call mpp_get_compute_domain2D_private(domainList(domain%index), xbegin, xend, ybegin, yend, xsize, &
+         xmax_size, ysize, ymax_size, x_is_global, y_is_global, tile_count, position )
+
+  end subroutine mpp_get_compute_domain2D
+
+  !#####################################################################
+  subroutine mpp_get_compute_domain2D_private( domain, xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size, &
+       x_is_global, y_is_global, tile_count, position )
+    type(domain2D_private),     intent(in) :: domain
     integer, intent(out), optional :: xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size
     logical, intent(out), optional :: x_is_global, y_is_global
     integer, intent(in),  optional :: tile_count, position
@@ -181,12 +199,25 @@
     if(PRESENT(ymax_size))ymax_size = ymax_size + jshift
 
     return
-  end subroutine mpp_get_compute_domain2D
+  end subroutine mpp_get_compute_domain2D_private
 
   !#####################################################################
   subroutine mpp_get_data_domain2D( domain, xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size, &
        x_is_global, y_is_global, tile_count, position )
     type(domain2D),     intent(in) :: domain
+    integer, intent(out), optional :: xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size
+    logical, intent(out), optional :: x_is_global, y_is_global
+    integer, intent(in),  optional :: tile_count, position
+    integer                        :: tile, ishift, jshift
+
+    call mpp_get_data_domain2D_private(domainList(domain%index), xbegin, xend, ybegin, yend, xsize, &
+       xmax_size, ysize, ymax_size, x_is_global, y_is_global, tile_count, position )
+
+  end subroutine mpp_get_data_domain2D
+
+  subroutine mpp_get_data_domain2D_private( domain, xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size, &
+       x_is_global, y_is_global, tile_count, position )
+    type(domain2D_private), intent(in) :: domain
     integer, intent(out), optional :: xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size
     logical, intent(out), optional :: x_is_global, y_is_global
     integer, intent(in),  optional :: tile_count, position
@@ -206,12 +237,25 @@
     if(PRESENT(ymax_size))ymax_size = ymax_size + jshift
 
     return
-  end subroutine mpp_get_data_domain2D
+  end subroutine mpp_get_data_domain2D_private
 
   !#####################################################################
   subroutine mpp_get_global_domain2D( domain, xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size, &
                                       tile_count, position )
     type(domain2D),     intent(in) :: domain
+    integer, intent(out), optional :: xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size
+    integer, intent(in),  optional :: tile_count, position
+    integer                        :: tile, ishift, jshift
+
+    call mpp_get_global_domain2D_private(domainList(domain%index), xbegin, xend, ybegin, yend, xsize, &
+         xmax_size, ysize, ymax_size, tile_count, position )
+
+  end subroutine mpp_get_global_domain2D
+
+  !#####################################################################
+  subroutine mpp_get_global_domain2D_private( domain, xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size, &
+                                      tile_count, position )
+    type(domain2D_private), intent(in) :: domain
     integer, intent(out), optional :: xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size
     integer, intent(in),  optional :: tile_count, position
     integer                        :: tile, ishift, jshift
@@ -230,12 +274,26 @@
     if(PRESENT(ymax_size))ymax_size = ymax_size + jshift
 
     return
-  end subroutine mpp_get_global_domain2D
+  end subroutine mpp_get_global_domain2D_private
 
   !#####################################################################
   subroutine mpp_get_memory_domain2D( domain, xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size, &
        x_is_global, y_is_global, position)
     type(domain2D),     intent(in) :: domain
+    integer, intent(out), optional :: xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size
+    logical, intent(out), optional :: x_is_global, y_is_global
+    integer, intent(in),  optional :: position
+    integer                        :: tile, ishift, jshift
+
+    call mpp_get_memory_domain2D_private(domainList(domain%index) , xbegin, xend, ybegin, yend, xsize, &
+         xmax_size, ysize, ymax_size, x_is_global, y_is_global, position)
+
+  end subroutine mpp_get_memory_domain2D
+
+  !#####################################################################
+  subroutine mpp_get_memory_domain2D_private( domain, xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size, &
+       x_is_global, y_is_global, position)
+    type(domain2D_private), intent(in) :: domain
     integer, intent(out), optional :: xbegin, xend, ybegin, yend, xsize, xmax_size, ysize, ymax_size
     logical, intent(out), optional :: x_is_global, y_is_global
     integer, intent(in),  optional :: position
@@ -254,7 +312,7 @@
     if(PRESENT(ymax_size))ymax_size = ymax_size + jshift
 
     return
-  end subroutine mpp_get_memory_domain2D
+  end subroutine mpp_get_memory_domain2D_private
 
   !#####################################################################
   subroutine mpp_set_compute_domain1D( domain, begin, end, size, is_global )
@@ -270,14 +328,16 @@
   end subroutine mpp_set_compute_domain1D
 
   !#####################################################################
-  subroutine mpp_set_compute_domain2D( domain, xbegin, xend, ybegin, yend, xsize, ysize, &
+  subroutine mpp_set_compute_domain2D( domainObj, xbegin, xend, ybegin, yend, xsize, ysize, &
                                        x_is_global, y_is_global, tile_count )
-    type(domain2D), intent(inout) :: domain
+    type(domain2D), intent(inout) :: domainObj
     integer, intent(in), optional :: xbegin, xend, ybegin, yend, xsize, ysize
     logical, intent(in), optional :: x_is_global, y_is_global
     integer, intent(in),  optional :: tile_count
     integer                        :: tile
+    type(domain2D_private), pointer :: domain=>NULL()
 
+    domain=>domainList(domainObj%index)
     tile = 1
     if(present(tile_count)) tile = tile_count
 
@@ -300,14 +360,16 @@
   end subroutine mpp_set_data_domain1D
 
   !#####################################################################
-  subroutine mpp_set_data_domain2D( domain, xbegin, xend, ybegin, yend, xsize, ysize, &
+  subroutine mpp_set_data_domain2D( domainObj, xbegin, xend, ybegin, yend, xsize, ysize, &
                                     x_is_global, y_is_global, tile_count )
-    type(domain2D), intent(inout) :: domain
+    type(domain2D), intent(inout) :: domainObj
     integer, intent(in), optional :: xbegin, xend, ybegin, yend, xsize, ysize
     logical, intent(in), optional :: x_is_global, y_is_global
     integer, intent(in),  optional :: tile_count
     integer                        :: tile
+    type(domain2D_private), pointer :: domain=>NULL()
 
+    domain => domainList(domainObj%index)
     tile = 1
     if(present(tile_count)) tile = tile_count
 
@@ -328,12 +390,14 @@
   end subroutine mpp_set_global_domain1D
 
   !#####################################################################
-  subroutine mpp_set_global_domain2D( domain, xbegin, xend, ybegin, yend, xsize, ysize, tile_count )
-    type(domain2D), intent(inout) :: domain
+  subroutine mpp_set_global_domain2D( domainObj, xbegin, xend, ybegin, yend, xsize, ysize, tile_count )
+    type(domain2D), intent(inout) :: domainObj
     integer, intent(in), optional :: xbegin, xend, ybegin, yend, xsize, ysize
     integer, intent(in),  optional :: tile_count
     integer                        :: tile
+    type(domain2D_private), pointer :: domain=>NULL()
 
+    domain => domainList(domainObj%index)
     tile = 1
     if(present(tile_count)) tile = tile_count
     call mpp_set_global_domain(domain%x(tile), xbegin, xend, xsize)
@@ -356,12 +420,13 @@
   !  <IN NAME="domain" TYPE="type(domain2D)"></IN>
   !  <OUT NAME="x,y"  TYPE="type(domain1D)"></OUT>
   ! </SUBROUTINE>
-  subroutine mpp_get_domain_components( domain, x, y, tile_count )
-    type(domain2D),            intent(in) :: domain
+  subroutine mpp_get_domain_components( domainObj, x, y, tile_count )
+    type(domain2D),            intent(in) :: domainObj
     type(domain1D), intent(inout), optional :: x, y
     integer, intent(in),  optional :: tile_count
     integer                        :: tile
-
+    type(domain2D_private), pointer :: domain=>NULL()
+    domain => domainList(domainObj%index)
     tile = 1
     if(present(tile_count)) tile = tile_count
     if( PRESENT(x) )x = domain%x(tile)
@@ -398,6 +463,16 @@ end subroutine mpp_get_compute_domains1D
 !#####################################################################
 subroutine mpp_get_compute_domains2D( domain, xbegin, xend, xsize, ybegin, yend, ysize, position )
  type(domain2D),                   intent(in) :: domain
+ integer, intent(out), optional, dimension(:) :: xbegin, xend, xsize, ybegin, yend, ysize
+ integer, intent(in ), optional               :: position
+
+ call mpp_get_compute_domains2D_private(domainList(domain%index), xbegin, xend, xsize, ybegin, yend, ysize, position )
+
+end subroutine mpp_get_compute_domains2D
+
+!#####################################################################
+subroutine mpp_get_compute_domains2D_private( domain, xbegin, xend, xsize, ybegin, yend, ysize, position )
+ type(domain2D_private),           intent(in) :: domain
  integer, intent(out), optional, dimension(:) :: xbegin, xend, xsize, ybegin, yend, ysize
  integer, intent(in ), optional               :: position
 
@@ -452,13 +527,16 @@ subroutine mpp_get_compute_domains2D( domain, xbegin, xend, xsize, ybegin, yend,
     end do
  end if
  return
-end subroutine mpp_get_compute_domains2D
+end subroutine mpp_get_compute_domains2D_private
 
 !#####################################################################
-subroutine mpp_get_domain_extents1D(domain, xextent, yextent)
-   type(domain2d),            intent(in) :: domain
+subroutine mpp_get_domain_extents1D(domainObj, xextent, yextent)
+   type(domain2d),            intent(in) :: domainObj
    integer, dimension(0:), intent(inout) :: xextent, yextent
    integer                               :: n
+   type(domain2D_private), pointer :: domain=>NULL()
+
+   domain => domainList(domainObj%index)
 
    if(domain%ntiles .NE. 1) call mpp_error(FATAL,"mpp_domains_util.inc(mpp_get_domain_extents1D): "// &
        "ntiles is more than 1, please use mpp_get_domain_extents2D")
@@ -477,10 +555,12 @@ end subroutine mpp_get_domain_extents1D
 
 !#####################################################################
 ! This will return xextent and yextent for each tile
-subroutine mpp_get_domain_extents2D(domain, xextent, yextent)
-   type(domain2d),             intent(in) :: domain
+subroutine mpp_get_domain_extents2D(domainObj, xextent, yextent)
+   type(domain2d),             intent(in) :: domainObj
    integer, dimension(:,:), intent(inout) :: xextent, yextent
    integer                                :: ntile, nlist, n, m, ndivx, ndivy, tile, pos
+   type(domain2D_private), pointer :: domain=>NULL()
+   domain => domainList(domainObj%index)
 
    ntile = domain%ntiles
    nlist = size(domain%list(:))
@@ -515,19 +595,15 @@ function mpp_get_domain_tile_root_pe(domain)
    type(domain2d), intent(in) :: domain
    integer                    :: mpp_get_domain_tile_root_pe
 
-   mpp_get_domain_tile_root_pe = domain%tile_root_pe
+   mpp_get_domain_tile_root_pe = domainList(domain%index)%tile_root_pe
 
 end function mpp_get_domain_tile_root_pe
 
 function mpp_get_io_domain(domain)
    type(domain2d), intent(in) :: domain
-   type(domain2d), pointer    :: mpp_get_io_domain
+   type(domain2d)             :: mpp_get_io_domain
 
-   if(ASSOCIATED(domain%io_domain)) then
-      mpp_get_io_domain => domain%io_domain
-   else
-      mpp_get_io_domain => NULL()
-   endif
+   mpp_get_io_domain%index = domainList(domain%index)%io_domain_index
 
 end function mpp_get_io_domain
 
@@ -561,10 +637,12 @@ end subroutine mpp_get_pelist1D
 !  <OUT NAME="pelist" TYPE="integer" DIM="(:)"></OUT>
 !  <OUT NAME="pos" TYPE="integer"></OUT>
 ! </SUBROUTINE>
-subroutine mpp_get_pelist2D( domain, pelist, pos )
- type(domain2D),     intent(in) :: domain
+subroutine mpp_get_pelist2D( domainObj, pelist, pos )
+ type(domain2D),     intent(in) :: domainObj
  integer,           intent(out) :: pelist(:)
  integer, intent(out), optional :: pos
+ type(domain2D_private), pointer :: domain=>NULL()
+ domain => domainList(domainObj%index)
 
  if( .NOT.module_is_initialized ) &
       call mpp_error( FATAL, 'MPP_GET_PELIST: must first call mpp_domains_init.' )
@@ -597,9 +675,11 @@ end subroutine mpp_get_layout1D
 !  <IN NAME="domain" TYPE="type(domain2D)"></IN>
 !  <OUT NAME="layout" TYPE="integer" DIM="(2)"></OUT>
 ! </SUBROUTINE>
-subroutine mpp_get_layout2D( domain, layout )
- type(domain2D), intent(in) :: domain
+subroutine mpp_get_layout2D( domainObj, layout )
+ type(domain2D), intent(in) :: domainObj
  integer,       intent(out) :: layout(2)
+ type(domain2D_private), pointer :: domain=>NULL()
+ domain => domainList(domainObj%index)
 
  if( .NOT.module_is_initialized ) &
       call mpp_error( FATAL, 'MPP_GET_LAYOUT: must first call mpp_domains_init.' )
@@ -632,8 +712,18 @@ end subroutine mpp_get_layout2D
   !   position of data. Its value can be CENTER, EAST, NORTH or CORNER.
   !  </OUT>
   ! </SUBROUTINE>
-subroutine mpp_get_domain_shift(domain, ishift, jshift, position)
+
+subroutine mpp_get_domain2d_shift(domain, ishift, jshift, position)
   type(domain2D),     intent(in) :: domain
+  integer,           intent(out) :: ishift, jshift
+  integer, optional,  intent(in) :: position
+
+  call mpp_get_domain2d_shift_private(domainList(domain%index), ishift, jshift, position)
+
+end subroutine mpp_get_domain2d_shift
+
+subroutine mpp_get_domain2d_shift_private(domain, ishift, jshift, position)
+  type(domain2D_private), intent(in) :: domain
   integer,           intent(out) :: ishift, jshift
   integer, optional,  intent(in) :: position
   integer :: pos
@@ -653,7 +743,7 @@ subroutine mpp_get_domain_shift(domain, ishift, jshift, position)
      end select
   end if
 
-end subroutine mpp_get_domain_shift
+end subroutine mpp_get_domain2d_shift_private
 
 !#####################################################################
 
@@ -706,16 +796,19 @@ end subroutine mpp_get_domain_shift
     end subroutine mpp_get_neighbor_pe_1d
 !#####################################################################
 
-    subroutine mpp_get_neighbor_pe_2d(domain, direction, pe)
+    subroutine mpp_get_neighbor_pe_2d(domainObj, direction, pe)
 
       ! Return PE North/South/East/West of this PE-domain.
       ! direction must be NORTH, SOUTH, EAST or WEST.
 
-      type(domain2D), intent(inout) :: domain
+      type(domain2D), intent(inout) :: domainObj
       integer, intent(in)           :: direction
       integer, intent(out)          :: pe
 
       integer ipos, jpos, npx, npy, ix, iy, ipos0, jpos0
+      type(domain2D_private), pointer :: domain=>NULL()
+
+      domain => domainList(domainObj%index)
 
       pe   = NULL_PE
       npx  = size(domain%x(1)%list(:)) ! 0..npx-1
@@ -799,7 +892,7 @@ end subroutine mpp_get_domain_shift
     type(domain2d), intent(in) :: domain
     logical                    :: mpp_domain_is_symmetry
 
-    mpp_domain_is_symmetry = domain%symmetry
+    mpp_domain_is_symmetry = domainList(domain%index)%symmetry
     return
 
   end function mpp_domain_is_symmetry
@@ -809,7 +902,7 @@ end subroutine mpp_get_domain_shift
     type(domain2d), intent(in) :: domain
     logical                    :: mpp_domain_is_initialized
 
-    mpp_domain_is_initialized = domain%initialized
+    mpp_domain_is_initialized = domainList(domain%index)%initialized
 
     return
 
@@ -820,7 +913,7 @@ end subroutine mpp_get_domain_shift
   !--- compare whalo, ehalo, shalo, nhalo with the halo size when defining "domain"
   !--- to decide if update is needed. Also it check the sign of whalo, ehalo, shalo and nhalo.
   function domain_update_is_needed(domain, whalo, ehalo, shalo, nhalo)
-    type(domain2d), intent(in) :: domain
+    type(domain2d_private), intent(in) :: domain
     integer,        intent(in) :: whalo, ehalo, shalo, nhalo
     logical                    :: domain_update_is_needed
 
@@ -847,7 +940,7 @@ end subroutine mpp_get_domain_shift
   ! this routine found the domain has the same halo size with the input
   ! whalo, ehalo, 
   function search_update_overlap(domain, whalo, ehalo, shalo, nhalo, position)
-    type(domain2d),          intent(inout) :: domain
+    type(domain2d_private),  intent(inout) :: domain
     integer,                    intent(in) :: whalo, ehalo, shalo, nhalo
     integer,                    intent(in) :: position
     type(overlapSpec),          pointer    :: search_update_overlap
@@ -906,7 +999,7 @@ end subroutine mpp_get_domain_shift
 !#######################################################################
   ! this routine found the check at certain position 
   function search_check_overlap(domain, position)
-    type(domain2d),             intent(in) :: domain
+    type(domain2d_private),     intent(in) :: domain
     integer,                    intent(in) :: position
     type(overlapSpec),          pointer    :: search_check_overlap
 
@@ -928,7 +1021,7 @@ end subroutine mpp_get_domain_shift
 !#######################################################################
   ! this routine found the bound at certain position 
   function search_bound_overlap(domain, position)
-    type(domain2d),             intent(in) :: domain
+    type(domain2d_private),     intent(in) :: domain
     integer,                    intent(in) :: position
     type(overlapSpec),          pointer    :: search_bound_overlap
 
@@ -951,20 +1044,22 @@ end subroutine mpp_get_domain_shift
   ! return the tile_id on current pe
   function mpp_get_tile_id(domain)
      type(domain2d),                  intent(in) :: domain
-     integer, dimension(size(domain%tile_id(:))) :: mpp_get_tile_id
+     integer, dimension(size(domainList(domain%index)%tile_id(:))) :: mpp_get_tile_id
 
-     mpp_get_tile_id = domain%tile_id
+     mpp_get_tile_id = domainList(domain%index)%tile_id
      return
 
   end function mpp_get_tile_id
 
   !#######################################################################
   ! return the tile_id on current pelist. one-tile-per-pe is assumed.
-  subroutine mpp_get_tile_list(domain, tiles)
-     type(domain2d), intent(in) :: domain
+  subroutine mpp_get_tile_list(domainObj, tiles)
+     type(domain2d), intent(in) :: domainObj
      integer,     intent(inout) :: tiles(:)
      integer                    :: i
+     type(domain2d_private), pointer :: domain=>NULL()
 
+    domain => domainList(domainObj%index)
     if( size(tiles(:)).NE.size(domain%list(:)) ) &
          call mpp_error( FATAL, 'mpp_get_tile_list: tiles array size does not match domain.' )
     do i = 1, size(tiles(:))
@@ -981,7 +1076,7 @@ end subroutine mpp_get_domain_shift
      type(domain2d),                  intent(in) :: domain
      integer                                     :: mpp_get_ntile_count
 
-     mpp_get_ntile_count = domain%ntiles
+     mpp_get_ntile_count = domainList(domain%index)%ntiles
      return
 
   end function mpp_get_ntile_count
@@ -992,7 +1087,7 @@ end subroutine mpp_get_domain_shift
      type(domain2d),                  intent(in) :: domain
      integer                                     :: mpp_get_current_ntile
 
-     mpp_get_current_ntile = size(domain%tile_id(:))
+     mpp_get_current_ntile = size(domainList(domain%index)%tile_id(:))
      return
 
   end function mpp_get_current_ntile
@@ -1001,9 +1096,12 @@ end subroutine mpp_get_domain_shift
   ! return if current pe is the root pe of the tile, if number of tiles on current pe 
   ! is greater than 1, will return true, if isc==isg and jsc==jsg also will return true,
   ! otherwise false will be returned.
-  function mpp_domain_is_tile_root_pe(domain)
-     type(domain2d), intent(in) :: domain
+  function mpp_domain_is_tile_root_pe(domainObj)
+     type(domain2d), intent(in) :: domainObj
      logical                    :: mpp_domain_is_tile_root_pe
+     type(domain2d_private), pointer :: domain=>NULL()
+
+     domain => domainList(domainObj%index)
 
      mpp_domain_is_tile_root_pe = domain%pe == domain%tile_root_pe;
 
@@ -1011,10 +1109,13 @@ end subroutine mpp_get_domain_shift
 
   !#########################################################################
   ! return number of processors used on current tile.
-  function mpp_get_tile_npes(domain)
-    type(domain2d), intent(in)  :: domain
+  function mpp_get_tile_npes(domainObj)
+    type(domain2d), intent(in)  :: domainObj
     integer                     :: mpp_get_tile_npes
     integer                     :: i, tile
+    type(domain2d_private), pointer :: domain=>NULL()
+
+    domain => domainList(domainObj%index)
 
     !--- When there is more than one tile on this pe, we assume each tile will be 
     !--- limited to this pe.
@@ -1032,13 +1133,16 @@ end subroutine mpp_get_domain_shift
 
   !########################################################################
   ! get the processors list used on current tile.
-  subroutine mpp_get_tile_pelist(domain, pelist)
-    type(domain2d), intent(in)  :: domain
+  subroutine mpp_get_tile_pelist(domainObj, pelist)
+    type(domain2d), intent(in)  :: domainObj
     integer,      intent(inout) :: pelist(:)
     integer                     :: npes_on_tile
     integer                     :: i, tile, pos
+    type(domain2d_private), pointer :: domain=>NULL()
 
-    npes_on_tile = mpp_get_tile_npes(domain)
+    domain => domainList(domainObj%index)
+
+    npes_on_tile = mpp_get_tile_npes(domainObj)
     if(size(pelist(:)) .NE. npes_on_tile) call mpp_error(FATAL, &
            "mpp_domains_util.inc(mpp_get_tile_pelist): size(pelist) does not equal npes on current tile")
     tile = domain%tile_id(1)
@@ -1055,14 +1159,17 @@ end subroutine mpp_get_domain_shift
   end subroutine mpp_get_tile_pelist
 
   !#############################################################################
-  function mpp_get_num_overlap(domain, action, p, position)
-    type(domain2d),    intent(in) :: domain
+  function mpp_get_num_overlap(domainObj, action, p, position)
+    type(domain2d),    intent(in) :: domainObj
     integer,           intent(in) :: action
     integer,           intent(in) :: p
     integer, optional, intent(in) :: position
     integer                       :: mpp_get_num_overlap
     type(overlapSpec), pointer    :: update => NULL()
     integer                       :: pos
+    type(domain2d_private), pointer :: domain=>NULL()
+
+    domain => domainList(domainObj%index)
 
     pos = CENTER
     if(present(position)) pos = position
@@ -1094,11 +1201,14 @@ end subroutine mpp_get_domain_shift
   end function mpp_get_num_overlap
 
   !#############################################################################
-  subroutine mpp_get_update_size(domain, nsend, nrecv, position)
-    type(domain2d),      intent(in) :: domain
+  subroutine mpp_get_update_size(domainObj, nsend, nrecv, position)
+    type(domain2d),      intent(in) :: domainObj
     integer,            intent(out) :: nsend, nrecv
     integer, optional,   intent(in) :: position
     integer                         :: pos
+    type(domain2d_private), pointer :: domain=>NULL()
+
+    domain => domainList(domainObj%index)
 
     pos = CENTER
     if(present(position)) pos = position
@@ -1122,13 +1232,16 @@ end subroutine mpp_get_domain_shift
   end subroutine mpp_get_update_size
 
   !#############################################################################
-  subroutine mpp_get_update_pelist(domain, action, pelist, position)
-    type(domain2d),       intent(in) :: domain
+  subroutine mpp_get_update_pelist(domainObj, action, pelist, position)
+    type(domain2d),       intent(in) :: domainObj
     integer,              intent(in) :: action
     integer,           intent(inout) :: pelist(:)
     integer, optional,    intent(in) :: position
     type(overlapSpec), pointer    :: update => NULL()
     integer                       :: pos, p
+    type(domain2d_private), pointer :: domain=>NULL()
+
+    domain => domainList(domainObj%index)
 
     pos = CENTER
     if(present(position)) pos = position
@@ -1164,8 +1277,8 @@ end subroutine mpp_get_domain_shift
   end subroutine mpp_get_update_pelist
 
   !#############################################################################
-  subroutine mpp_get_overlap(domain, action, p, is, ie, js, je, dir, rot, position)
-    type(domain2d),         intent(in) :: domain
+  subroutine mpp_get_overlap(domainObj, action, p, is, ie, js, je, dir, rot, position)
+    type(domain2d),         intent(in) :: domainObj
     integer,                intent(in) :: action
     integer,                intent(in) :: p
     integer, dimension(:), intent(out) :: is, ie, js, je
@@ -1174,6 +1287,9 @@ end subroutine mpp_get_domain_shift
     type(overlapSpec),      pointer    :: update => NULL()
     type(overlap_type),     pointer    :: overlap => NULL()
     integer                            :: count, pos, isd, jsd
+    type(domain2d_private), pointer :: domain=>NULL()
+
+    domain => domainList(domainObj%index)
 
     pos = CENTER
     if(present(position)) pos = position
@@ -1221,7 +1337,7 @@ end subroutine mpp_get_domain_shift
      type(domain2d),    intent(in) :: domain
      character(len=NAME_LENGTH)    :: mpp_get_domain_name
 
-     mpp_get_domain_name = domain%name
+     mpp_get_domain_name = domainList(domain%index)%name
 
   end function mpp_get_domain_name
 
@@ -1230,7 +1346,7 @@ end subroutine mpp_get_domain_shift
      type(domain2d),    intent(in) :: domain
      integer                       :: mpp_get_domain_root_pe
      
-     mpp_get_domain_root_pe = domain%list(0)%pe
+     mpp_get_domain_root_pe = domainList(domain%index)%list(0)%pe
 
   end function mpp_get_domain_root_pe
   !#################################################################
@@ -1238,17 +1354,20 @@ end subroutine mpp_get_domain_shift
      type(domain2d),    intent(in) :: domain
      integer                       :: mpp_get_domain_npes  
 
-     mpp_get_domain_npes = size(domain%list(:))
+     mpp_get_domain_npes = size(domainList(domain%index)%list(:))
 
      return
 
   end function mpp_get_domain_npes
 
   !################################################################
-  subroutine mpp_get_domain_pelist(domain, pelist)
-     type(domain2d),    intent(in) :: domain
+  subroutine mpp_get_domain_pelist(domainObj, pelist)
+     type(domain2d),    intent(in) :: domainObj
      integer,          intent(out) :: pelist(:)
      integer :: p
+     type(domain2d_private), pointer :: domain=>NULL()
+
+     domain => domainList(domainObj%index)
 
      if(size(pelist(:)) .NE. size(domain%list(:)) ) then
         call mpp_error(FATAL, "mpp_get_domain_pelist: size(pelist(:)) .NE. size(domain%list(:)) ")
@@ -1267,13 +1386,13 @@ end subroutine mpp_get_domain_shift
      type(domain2d),    intent(in) :: domain
      integer, dimension(2)         :: mpp_get_io_domain_layout
 
-     mpp_get_io_domain_layout = domain%io_layout
+     mpp_get_io_domain_layout = domainList(domain%index)%io_layout
 
   end function mpp_get_io_domain_layout
 
   !################################################################
   function get_rank_send(domain, overlap_x, overlap_y, rank_x, rank_y, ind_x, ind_y)
-    type(domain2D),    intent(in) :: domain
+    type(domain2D_private), intent(in) :: domain
     type(overlapSpec), intent(in) :: overlap_x, overlap_y
     integer,          intent(out) :: rank_x, rank_y, ind_x, ind_y
     integer                       :: get_rank_send
@@ -1300,7 +1419,7 @@ end subroutine mpp_get_domain_shift
 
   !############################################################################
   function get_rank_recv(domain, overlap_x, overlap_y, rank_x, rank_y, ind_x, ind_y)
-    type(domain2D),    intent(in) :: domain
+    type(domain2D_private),    intent(in) :: domain
     type(overlapSpec), intent(in) :: overlap_x, overlap_y
     integer,          intent(out) :: rank_x, rank_y, ind_x, ind_y
     integer                       :: get_rank_recv
@@ -1330,7 +1449,7 @@ end subroutine mpp_get_domain_shift
   end function get_rank_recv
 
   function get_vector_recv(domain, update_x, update_y, ind_x, ind_y, start_pos, pelist)
-    type(domain2D),    intent(in) :: domain
+    type(domain2D_private),    intent(in) :: domain
     type(overlapSpec), intent(in) :: update_x, update_y
     integer,          intent(out) :: ind_x(:), ind_y(:)
     integer,          intent(out) :: start_pos(:)
@@ -1396,7 +1515,7 @@ end subroutine mpp_get_domain_shift
   end function get_vector_recv
 
   function get_vector_send(domain, update_x, update_y, ind_x, ind_y, start_pos, pelist)
-    type(domain2D),    intent(in) :: domain
+    type(domain2D_private),    intent(in) :: domain
     type(overlapSpec), intent(in) :: update_x, update_y
     integer,          intent(out) :: ind_x(:), ind_y(:)
     integer,          intent(out) :: start_pos(:)
@@ -1464,7 +1583,7 @@ end subroutine mpp_get_domain_shift
 
   !############################################################################  
   function get_rank_unpack(domain, overlap_x, overlap_y, rank_x, rank_y, ind_x, ind_y)
-    type(domain2D),    intent(in) :: domain
+    type(domain2D_private),    intent(in) :: domain
     type(overlapSpec), intent(in) :: overlap_x, overlap_y
     integer,          intent(out) :: rank_x, rank_y, ind_x, ind_y
     integer                       :: get_rank_unpack
@@ -1512,7 +1631,7 @@ end subroutine mpp_get_domain_shift
     type(domain2D), intent(inout) :: domain
     logical,        intent(in   ) :: symmetry
 
-    domain%symmetry = symmetry
+    domainList(domain%index)%symmetry = symmetry
 
   end subroutine mpp_set_domain_symmetry
   
@@ -1534,11 +1653,19 @@ end subroutine mpp_get_domain_shift
   !#################################################################
   !z1l: This is not fully implemented. The current purpose is to make
   !     it work in read_data.
-  subroutine mpp_copy_domain2D(domain_in, domain_out)
-     type(domain2D),    intent(in) :: domain_in
-     type(domain2D), intent(inout) :: domain_out
+  subroutine mpp_copy_domain2D(domainObj_in, domainObj_out)
+     type(domain2D),    intent(in) :: domainObj_in
+     type(domain2D), intent(inout) :: domainObj_out
 
      integer :: n, ntiles
+     type(domain2d_private), pointer :: domain_in=>NULL()
+     type(domain2d_private), pointer :: domain_out=>NULL()
+
+     cur_domain_index = cur_domain_index+1
+     domainObj_out%index = cur_domain_index
+     call check_domain2d_index(domainObj_out, "mpp_copy_domain2D")
+     domain_in => domainList(domainObj_in%index)
+     domain_out => domainList(domainObj_out%index)
 
      domain_out%id             = domain_in%id
      domain_out%pe             = domain_in%pe
@@ -1573,7 +1700,7 @@ end subroutine mpp_get_domain_shift
   !######################################################################
   subroutine set_group_update(group, domain)
      type(mpp_group_update_type), intent(inout) :: group  
-     type(domain2D),              intent(inout) :: domain
+     type(domain2D_private),      intent(inout) :: domain
      integer   :: nscalar, nvector, nlist
      integer   :: nsend, nrecv, nsend_old, nrecv_old
      integer   :: nsend_s, nsend_x, nsend_y
@@ -2263,7 +2390,7 @@ end subroutine set_group_update
 
 !#####################################################################
   subroutine get_domain_halos(domain, update_whalo, update_ehalo, update_shalo, update_nhalo, whalo, ehalo, shalo, nhalo)
-     type(domain2D),    intent(in) :: domain   
+     type(domain2D_private), intent(in) :: domain   
      integer,          intent(out) :: update_whalo, update_ehalo, update_shalo, update_nhalo
      integer, optional, intent(in) :: whalo, ehalo, shalo, nhalo
      
@@ -2871,5 +2998,14 @@ end subroutine set_group_update
 
   end subroutine unpack_buffer_i4
 
+  !####################################################################
+  subroutine check_domain2d_index(domain, msg)
+     type(domain2d),   intent(in) :: domain
+     character(len=*), intent(in) :: msg
+
+     if(domain%index < DOMAIN2D_INDEX_START) call mpp_error(FATAL, trim(msg)//": domain%index < DOMAIN2D_INDEX_START")
+     if(domain%index > DOMAIN2D_INDEX_END) call mpp_error(FATAL, trim(msg)//": domain%index > DOMAIN2D_INDEX_END, contact developer" )
+
+  end subroutine check_domain2d_index
 
 

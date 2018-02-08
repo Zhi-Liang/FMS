@@ -6,6 +6,19 @@ subroutine mpp_global_field_2d( domain, local, global, flags, position,tile_coun
   integer,  intent(in),  optional :: position
   integer,  intent(in),  optional :: tile_count
   class(*), intent(in),  optional :: default_data
+
+  call global_field_2d_private(domainList(domain%index), local, global, flags, position,tile_count, default_data)
+
+end subroutine mpp_global_field_2d
+
+subroutine global_field_2d_private( domain, local, global, flags, position,tile_count, default_data)
+  type(domain2D_private), intent(in) :: domain
+  class(*), intent(in)            :: local(:,:)
+  class(*), intent(out)           :: global(:,:)
+  integer,  intent(in),  optional :: flags
+  integer,  intent(in),  optional :: position
+  integer,  intent(in),  optional :: tile_count
+  class(*), intent(in),  optional :: default_data
   integer           :: l_size(3), g_size(3)
   class(*), pointer :: local3D(:,:,:) => NULL()
   class(*), pointer :: global3D(:,:,:) => NULL()
@@ -15,12 +28,25 @@ subroutine mpp_global_field_2d( domain, local, global, flags, position,tile_coun
   g_size(1) = size(global,1); g_size(2) = size(global,2); g_size(3)=1
   call point_3D_to_2D(l_size(1), l_size(2), local, local3D)
   call point_3D_to_2D(g_size(1), g_size(2), global, global3D)
-  call mpp_global_field_3d(domain, local3D, global3d, flags, position,tile_count, default_data)
+  call global_field_3d_private(domain, local3D, global3d, flags, position,tile_count, default_data)
 
-end subroutine mpp_global_field_2d
+end subroutine global_field_2d_private
 
 subroutine mpp_global_field_3d( domain, local, global, flags, position,tile_count, default_data)
   type(domain2D),     intent(in) :: domain
+  class(*),          intent(in)  :: local(:,:,:)
+  class(*),          intent(out) :: global(:,:,:)
+  integer,  intent(in), optional :: flags
+  integer,  intent(in), optional :: position
+  integer,  intent(in), optional :: tile_count
+  class(*), intent(in), optional :: default_data
+
+  call global_field_3d_private(domainList(domain%index), local, global, flags, position,tile_count, default_data)
+
+end subroutine mpp_global_field_3d
+
+subroutine global_field_3d_private( domain, local, global, flags, position,tile_count, default_data)
+  type(domain2D_private), intent(in) :: domain
   class(*),          intent(in)  :: local(:,:,:)
   class(*),          intent(out) :: global(:,:,:)
   integer,  intent(in), optional :: flags
@@ -137,10 +163,23 @@ subroutine mpp_global_field_3d( domain, local, global, flags, position,tile_coun
      call mpp_error(FATAL, "mpp_global_field_3d: only support 4-byte and 8-byte real, contact developer")   
   end select
 
-end subroutine mpp_global_field_3d
+end subroutine global_field_3d_private
 
 subroutine mpp_global_field_4d( domain, local, global, flags, position,tile_count, default_data)
   type(domain2D),     intent(in) :: domain
+  class(*), intent(in)           :: local(:,:,:,:)
+  class(*), intent(out)          :: global(:,:,:,:)
+  integer,  intent(in), optional :: flags
+  integer,  intent(in), optional :: position
+  integer,  intent(in), optional :: tile_count
+  class(*), intent(in), optional :: default_data
+
+  call global_field_4d_private(domainList(domain%index), local, global, flags, position,tile_count, default_data)
+
+end subroutine mpp_global_field_4d
+
+subroutine global_field_4d_private( domain, local, global, flags, position,tile_count, default_data)
+  type(domain2D_private), intent(in) :: domain
   class(*), intent(in)           :: local(:,:,:,:)
   class(*), intent(out)          :: global(:,:,:,:)
   integer,  intent(in), optional :: flags
@@ -157,11 +196,24 @@ subroutine mpp_global_field_4d( domain, local, global, flags, position,tile_coun
   call point_3D_to_4D(l_size(1), l_size(2), size(local,3), size(local,4), local, local3D)
   call point_3D_to_4D(g_size(1), g_size(2), size(global,3), size(global,4), global, global3D)
 
-  call mpp_global_field_3d(domain, local3D, global3D, flags, position,tile_count, default_data)
+  call global_field_3d_private(domain, local3D, global3D, flags, position,tile_count, default_data)
 
-end subroutine mpp_global_field_4d
+end subroutine global_field_4d_private
 
 subroutine mpp_global_field_5d( domain, local, global, flags, position,tile_count, default_data)
+  type(domain2D),     intent(in)  :: domain
+  class(*), intent(in)            :: local(:,:,:,:,:)
+  class(*), intent(out)           :: global(:,:,:,:,:)
+  integer,  intent(in),  optional :: flags
+  integer,  intent(in),  optional :: position
+  integer,  intent(in),  optional :: tile_count
+  class(*), intent(in),  optional :: default_data
+
+  call global_field_5d_private(domain, local, global, flags, position,tile_count, default_data)
+
+end subroutine mpp_global_field_5d
+
+subroutine global_field_5d_private( domain, local, global, flags, position,tile_count, default_data)
   type(domain2D),     intent(in)  :: domain
   class(*), intent(in)            :: local(:,:,:,:,:)
   class(*), intent(out)           :: global(:,:,:,:,:)
@@ -178,13 +230,13 @@ subroutine mpp_global_field_5d( domain, local, global, flags, position,tile_coun
   g_size(1) = size(global,1); g_size(2) = size(global,2); g_size(3)=size(global,3)*size(global,4)*size(global,5)
   call point_3D_to_5D(l_size(1), l_size(2), size(local,3), size(local,4), size(local,5), local, local3D)
   call point_3D_to_5D(g_size(1), g_size(2), size(global,3), size(global,4), size(global,5), global, global3D)
-  call mpp_global_field_3d(domain, local3D, global3D, flags, position,tile_count, default_data)
+  call global_field_3d_private(domainList(domain%index), local3D, global3D, flags, position,tile_count, default_data)
 
-end subroutine mpp_global_field_5d
+end subroutine global_field_5d_private
 
 subroutine do_global_field_r8(domain, local, global, xonly, yonly, &
      root_only, tile, ishift, jshift, ioff, joff, ipos, jpos, default_data)
-  type(domain2D),     intent(in) :: domain
+  type(domain2D_private), intent(in) :: domain
   real(DOUBLE_KIND),  intent(in) :: local (:,:,:)
   real(DOUBLE_KIND), intent(out) :: global(:,:,:)
   logical,            intent(in) :: xonly, yonly, root_only
@@ -198,7 +250,7 @@ end subroutine do_global_field_r8
 
 subroutine do_global_field_r4(domain, local, global, xonly, yonly, &
      root_only, tile, ishift, jshift, ioff, joff, ipos, jpos, default_data)
-  type(domain2D),     intent(in) :: domain
+  type(domain2D_private), intent(in) :: domain
   real(FLOAT_KIND),   intent(in) :: local(:,:,:)
   real(FLOAT_KIND),  intent(out) :: global(:,:,:)
   logical,            intent(in) :: xonly, yonly, root_only

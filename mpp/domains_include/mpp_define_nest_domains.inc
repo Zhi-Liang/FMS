@@ -2,12 +2,12 @@
 
 !#############################################################################
 ! Currently the contact will be limited to overlap contact.
-subroutine mpp_define_nest_domains(nest_domain, domain_fine, domain_coarse, tile_fine, tile_coarse, &
+subroutine mpp_define_nest_domains(nest_domain, domainObj_fine, domainObj_coarse, tile_fine, tile_coarse, &
                                   istart_fine, iend_fine, jstart_fine, jend_fine,                  &
                                   istart_coarse, iend_coarse, jstart_coarse, jend_coarse,         &
                                   pelist, extra_halo, name) 
   type(nest_domain_type),     intent(inout) :: nest_domain
-  type(domain2D), target,     intent(in   ) :: domain_fine, domain_coarse
+  type(domain2D),             intent(in   ) :: domainObj_fine, domainObj_coarse
   integer,                    intent(in   ) :: tile_fine, tile_coarse
   integer,                    intent(in   ) :: istart_fine, iend_fine, jstart_fine, jend_fine
   integer,                    intent(in   ) :: istart_coarse, iend_coarse, jstart_coarse, jend_coarse
@@ -25,7 +25,11 @@ subroutine mpp_define_nest_domains(nest_domain, domain_fine, domain_coarse, tile
   integer, allocatable                      :: pes(:)
   integer, allocatable                      :: pes_coarse(:)
   integer, allocatable                      :: pes_fine(:)
+  type(domain2D_private), pointer :: domain_fine=>NULL()
+  type(domain2D_private), pointer :: domain_coarse=>NULL()
 
+  domain_fine => domainList(domainObj_fine%index)
+  domain_coarse => domainList(domainObj_coarse%index)
 
   if(PRESENT(name)) then
      if(len_trim(name) > NAME_LENGTH) then
@@ -144,8 +148,8 @@ subroutine mpp_define_nest_domains(nest_domain, domain_fine, domain_coarse, tile
 
   nest_domain%x_refine = x_refine
   nest_domain%y_refine = y_refine
-  nest_domain%domain_fine   => domain_fine
-  nest_domain%domain_coarse => domain_coarse
+  nest_domain%domain_fine   = domainObj_fine
+  nest_domain%domain_coarse = domainObj_coarse
 
   allocate( nest_domain%C2F_T, nest_domain%C2F_C, nest_domain%C2F_E, nest_domain%C2F_N )
   nest_domain%C2F_T%next => NULL()
@@ -177,8 +181,10 @@ subroutine compute_overlap_coarse_to_fine(nest_domain, overlap, extra_halo, posi
    integer,                intent(in   ) :: position
    character(len=*),       intent(in   ) :: name
 
-   type(domain2D), pointer :: domain_fine  =>NULL()
-   type(domain2D), pointer :: domain_coarse=>NULL()
+   type(domain2D)       :: domainObj_fine 
+   type(domain2D)       :: domainObj_coarse
+   type(domain2D_private), pointer :: domain_fine=>NULL()
+   type(domain2D_private), pointer :: domain_coarse=>NULL()
    type(overlap_type), allocatable :: overlapList(:)
    logical              :: is_first
    integer              :: tile_fine, tile_coarse
@@ -205,8 +211,8 @@ subroutine compute_overlap_coarse_to_fine(nest_domain, overlap, extra_halo, posi
    integer              :: outunit
 
    outunit = stdout()
-   domain_fine   => nest_domain%domain_fine
-   domain_coarse => nest_domain%domain_coarse
+   domain_fine   => domainList(nest_domain%domain_fine%index)
+   domain_coarse => domainList(nest_domain%domain_coarse%index)
    call mpp_get_domain_shift   (domain_coarse, ishift, jshift, position)
    tile_fine     = nest_domain%tile_fine
    tile_coarse   = nest_domain%tile_coarse
@@ -655,8 +661,8 @@ subroutine compute_overlap_fine_to_coarse(nest_domain, overlap, position, name)
 
    !--- local variables
 
-   type(domain2D), pointer :: domain_fine  =>NULL()
-   type(domain2D), pointer :: domain_coarse=>NULL()
+   type(domain2D_private), pointer :: domain_fine  =>NULL()
+   type(domain2D_private), pointer :: domain_coarse=>NULL()
    type(overlap_type), allocatable :: overlapList(:)
    integer              :: tile_fine, tile_coarse
    integer              :: istart_fine, iend_fine, jstart_fine, jend_fine
@@ -676,8 +682,8 @@ subroutine compute_overlap_fine_to_coarse(nest_domain, overlap, position, name)
    integer              :: outunit
 
    outunit = stdout()
-   domain_fine   => nest_domain%domain_fine
-   domain_coarse => nest_domain%domain_coarse
+   domain_fine   => domainList(nest_domain%domain_fine%index)
+   domain_coarse => domainList(nest_domain%domain_coarse%index)
    tile_fine     = nest_domain%tile_fine
    tile_coarse   = nest_domain%tile_coarse
    istart_fine   = nest_domain%istart_fine

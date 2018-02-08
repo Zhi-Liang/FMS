@@ -1,7 +1,8 @@
   !#####################################################################
-  subroutine mpp_define_unstruct_domain(UG_domain, SG_domain, npts_tile, grid_nlev, ndivs, npes_io_group, grid_index, name)
-     type(domainUG),   intent(inout) :: UG_domain
-     type(domain2d), target,     intent(in) :: SG_domain 
+  subroutine mpp_define_unstruct_domain(UG_domainObj, SG_domainObj, npts_tile, grid_nlev, ndivs, &
+                                        npes_io_group, grid_index, name)
+     type(domainUG),          intent(inout) :: UG_domainObj
+     type(domain2d),             intent(in) :: SG_domainObj 
      integer,                    intent(in) :: npts_tile(:) ! number of unstructured points on each tile
      integer,                    intent(in) :: grid_nlev(:) ! number of levels in each unstructured grid.
      integer,                    intent(in) :: ndivs       
@@ -17,8 +18,19 @@
      integer :: npts_left, ndiv_left, cur_pos, ndiv, prev_cost, ioff
      real    :: avg_cost
      integer :: costs(size(npts_tile(:)))
+     type(domain2d_private), pointer :: SG_domain
+     type(domainUG_private), pointer :: UG_domain
+     type(domainUG_private), pointer :: io_domain     
+     type(domainUG) :: io_domainObj
 
-     UG_domain%SG_domain => SG_domain
+     if(UG_domainObj%index .NE. 0) call mpp_error(FATAL, "mpp_define_unstruct_domain: UG_domainObj%index should be zero")
+     cur_domainUG_index = cur_domainUG_index+1
+     UG_domainObj%index = cur_domainUG_index
+     call check_domainUG_index(UG_domainObj, "mpp_define_unstruct_domain")
+     UG_domain => domainUGList(cur_domainUG_index)
+     SG_domain => domainList(SG_domainObj%index)
+
+     UG_domain%SG_domain_index = SG_domainObj%index
      ntiles = size(npts_tile(:))
      UG_domain%ntiles = ntiles
 
@@ -165,9 +177,15 @@
      enddo
 
      !--- define io_domain
-     allocate(UG_domain%io_domain)
+     if(UG_domain%io_domain_index .NE. 0) call mpp_error(FATAL, 'mpp_define_unstruct_domain: UG_domain%io_domain_index .NE. 0')
+     cur_domainUG_index = cur_domainUG_index+1
+     UG_domain%io_domain_index = cur_domainUG_index
+     io_domainObj%index = cur_domainUG_index
+     call check_domainUG_index(io_domainObj, "mpp_define_unstruct_domain io_domain")
+     io_domain => domainUGList(cur_domainUG_index)
+
      tile_id = UG_domain%tile_id
-     UG_domain%io_domain%pe = UG_domain%pe
+     io_domain%pe = UG_domain%pe
      !--- figure out number groups for current tile
      if(npes_io_group == 0) then
         ngroup = 1
@@ -190,27 +208,27 @@
         endif
      enddo
      
-     UG_domain%io_domain%tile_id            = group_id+1
-     UG_domain%io_domain%compute            = UG_domain%compute
-     UG_domain%io_domain%pe                 = UG_domain%pe
-     UG_domain%io_domain%pos                = my_pos - ibegin(group_id) + 1
-     UG_domain%io_domain%tile_root_pe       = ibegin(group_id) + UG_domain%tile_root_pe - 1
-     pos = UG_domain%io_domain%tile_root_pe - mpp_root_pe() 
-     UG_domain%io_domain%global%begin       = UG_domain%list(pos)%compute%begin
-     UG_domain%io_domain%global%begin_index = UG_domain%list(pos)%compute%begin_index
+     io_domain%tile_id            = group_id+1
+     io_domain%compute            = UG_domain%compute
+     io_domain%pe                 = UG_domain%pe
+     io_domain%pos                = my_pos - ibegin(group_id) + 1
+     io_domain%tile_root_pe       = ibegin(group_id) + UG_domain%tile_root_pe - 1
+     pos = io_domain%tile_root_pe - mpp_root_pe() 
+     io_domain%global%begin       = UG_domain%list(pos)%compute%begin
+     io_domain%global%begin_index = UG_domain%list(pos)%compute%begin_index
      pos = iend(group_id) + UG_domain%tile_root_pe - mpp_root_pe() - 1
-     UG_domain%io_domain%global%end         = UG_domain%list(pos)%compute%end
-     UG_domain%io_domain%global%end_index   = UG_domain%list(pos)%compute%end_index
-     UG_domain%io_domain%global%size        = UG_domain%io_domain%global%end -  UG_domain%io_domain%global%begin + 1
+     io_domain%global%end         = UG_domain%list(pos)%compute%end
+     io_domain%global%end_index   = UG_domain%list(pos)%compute%end_index
+     io_domain%global%size        = io_domain%global%end -  io_domain%global%begin + 1
      
      npes_in_group = iend(group_id) - ibegin(group_id) + 1
-     allocate(UG_domain%io_domain%list(0:npes_in_group-1))
+     allocate(io_domain%list(0:npes_in_group-1))
      do n = 0, npes_in_group-1
-        pos = UG_domain%io_domain%tile_root_pe - mpp_root_pe() + n
-        UG_domain%io_domain%list(n)%compute = UG_domain%list(pos)%compute
-        UG_domain%io_domain%list(n)%pos = n
-        UG_domain%io_domain%list(n)%pe = UG_domain%list(pos)%pe
-        UG_domain%io_domain%list(n)%tile_id = group_id+1
+        pos = io_domain%tile_root_pe - mpp_root_pe() + n
+        io_domain%list(n)%compute = UG_domain%list(pos)%compute
+        io_domain%list(n)%pos = n
+        io_domain%list(n)%pe = UG_domain%list(pos)%pe
+        io_domain%list(n)%tile_id = group_id+1
      enddo    
  
      call compute_overlap_SG2UG(UG_domain, SG_domain)
@@ -223,8 +241,8 @@
 
   !####################################################################
   subroutine compute_overlap_SG2UG(UG_domain, SG_domain)
-     type(domainUG),   intent(inout) :: UG_domain
-     type(domain2d),             intent(in) :: SG_domain
+     type(domainUG_private),   intent(inout) :: UG_domain
+     type(domain2d_private),      intent(in) :: SG_domain
      integer, dimension(0:size(SG_domain%list(:))-1) :: send_cnt, recv_cnt
      integer, dimension(0:size(SG_domain%list(:))-1) :: send_buffer_pos, recv_buffer_pos
      integer, dimension(:), allocatable              :: send_buffer, recv_buffer, index_list
@@ -353,7 +371,7 @@ return
 
   !####################################################################
   subroutine compute_overlap_UG2SG(UG_domain)
-     type(domainUG),   intent(inout) :: UG_domain
+     type(domainUG_private),   intent(inout) :: UG_domain
 
      !--- UG2SG is the reverse of SG2UG
      UG_domain%UG2SG%nsend = UG_domain%SG2UG%nrecv
@@ -367,10 +385,10 @@ return
 
   !####################################################################
   subroutine mpp_get_UG_SG_domain(UG_domain,SG_domain)
-     type(domainUG),   intent(inout) :: UG_domain
-     type(domain2d),   pointer       :: SG_domain
+     type(domainUG), intent(inout) :: UG_domain
+     type(domain2d), intent(out)   :: SG_domain
 
-     SG_domain => UG_domain%SG_domain
+     SG_domain%index = domainUGList(UG_domain%index)%sg_domain_index
 
      return
 
@@ -379,21 +397,21 @@ return
   !####################################################################
   function mpp_get_UG_io_domain(domain)
      type(domainUG), intent(in) :: domain
-     type(domainUG), pointer    :: mpp_get_UG_io_domain
+     type(domainUG)             :: mpp_get_UG_io_domain
 
-     if(ASSOCIATED(domain%io_domain)) then
-        mpp_get_UG_io_domain => domain%io_domain
-     else
-        call mpp_error(FATAL, "mpp_get_UG_io_domain: io_domain is not defined, contact developer")
-     endif
+     if(domainUGList(domain%index)%io_domain_index == 0) &
+         call mpp_error(FATAL, "mpp_get_UG_io_domain: io_domain is not defined, contact developer")
+     mpp_get_UG_io_domain%index = domainUGList(domain%index)%io_domain_index
 
   end function mpp_get_UG_io_domain
 
   !#####################################################################
-  subroutine mpp_get_UG_compute_domain( domain, begin, end, size)
-    type(domainUG),  intent(in) :: domain
+  subroutine mpp_get_UG_compute_domain( domainObj, begin, end, size)
+    type(domainUG),  intent(in) :: domainObj
     integer, intent(out), optional :: begin, end, size
+    type(domainUG_private), pointer :: domain=> NULL()
 
+    domain => domainUGList(domainObj%index)
     if( PRESENT(begin)     )begin     = domain%compute%begin
     if( PRESENT(end)       )end       = domain%compute%end
     if( PRESENT(size)      )size      = domain%compute%size
@@ -401,10 +419,12 @@ return
   end subroutine mpp_get_UG_compute_domain
 
   !#####################################################################
-  subroutine mpp_get_UG_global_domain( domain, begin, end, size)
-    type(domainUG),  intent(in) :: domain
+  subroutine mpp_get_UG_global_domain( domainObj, begin, end, size)
+    type(domainUG),  intent(in) :: domainObj
     integer, intent(out), optional :: begin, end, size
+    type(domainUG_private), pointer :: domain=> NULL()
 
+    domain => domainUGList(domainObj%index)
     if( PRESENT(begin)     )begin     = domain%global%begin
     if( PRESENT(end)       )end       = domain%global%end
     if( PRESENT(size)      )size      = domain%global%size
@@ -412,9 +432,12 @@ return
   end subroutine mpp_get_UG_global_domain
 
   !#####################################################################
-  subroutine mpp_get_UG_compute_domains( domain, begin, end, size )
-    type(domainUG),                   intent(in) :: domain
+  subroutine mpp_get_UG_compute_domains( domainObj, begin, end, size )
+    type(domainUG),                   intent(in) :: domainObj
     integer, intent(out), optional, dimension(:) :: begin, end, size
+    type(domainUG_private), pointer :: domain=> NULL()
+
+    domain => domainUGList(domainObj%index)
 
     !we use shape instead of size for error checks because size is used as an argument
     if( PRESENT(begin) )then
@@ -436,9 +459,12 @@ return
   end subroutine mpp_get_UG_compute_domains
 
   !#####################################################################
-  subroutine mpp_get_UG_domains_index( domain, begin, end)
-    type(domainUG),         intent(in) :: domain
+  subroutine mpp_get_UG_domains_index( domainObj, begin, end)
+    type(domainUG),         intent(in) :: domainObj
     integer, intent(out), dimension(:) :: begin, end
+    type(domainUG_private), pointer :: domain=> NULL()
+
+    domain => domainUGList(domainObj%index)
 
     !we use shape instead of size for error checks because size is used as an argument
     if( any(shape(begin).NE.shape(domain%list)) ) &
@@ -455,15 +481,18 @@ return
     type(domainUG),  intent(in) :: domain
     integer :: mpp_get_UG_domain_ntiles
 
-    mpp_get_UG_domain_ntiles = domain%ntiles
+    mpp_get_UG_domain_ntiles = domainUGList(domain%index)%ntiles
     return
   end function mpp_get_UG_domain_ntiles
 
   !#######################################################################
-  subroutine mpp_get_ug_domain_tile_list(domain, tiles)
-     type(domainUG), intent(in) :: domain
+  subroutine mpp_get_ug_domain_tile_list(domainObj, tiles)
+     type(domainUG), intent(in) :: domainObj
      integer,     intent(inout) :: tiles(:)
      integer                    :: i
+     type(domainUG_private), pointer :: domain=> NULL()
+
+     domain => domainUGList(domainObj%index)
 
      if( size(tiles(:)).NE.size(domain%list(:)) ) &
          call mpp_error( FATAL, 'mpp_get_ug_domain_tile_list: tiles array size does not match domain.' )
@@ -478,7 +507,7 @@ return
     type(domainUG),  intent(in) :: domain
     integer :: mpp_get_UG_domain_tile_id
 
-    mpp_get_UG_domain_tile_id = domain%tile_id
+    mpp_get_UG_domain_tile_id = domainUGList(domain%index)%tile_id
     return
   end function mpp_get_UG_domain_tile_id
 
@@ -487,16 +516,19 @@ return
      type(domainUG), intent(in) :: domain
      integer :: mpp_get_UG_domain_npes
 
-     mpp_get_UG_domain_npes = size(domain%list(:))
+     mpp_get_UG_domain_npes = size(domainUGList(domain%index)%list(:))
      return
 
   end function mpp_get_UG_domain_npes
 
 
   !####################################################################
-  subroutine mpp_get_UG_domain_pelist( domain, pelist)
-     type(domainUG), intent(in) :: domain
+  subroutine mpp_get_UG_domain_pelist( domainObj, pelist)
+     type(domainUG), intent(in) :: domainObj
      integer,              intent(out) :: pelist(:)
+     type(domainUG_private), pointer :: domain=> NULL()
+
+     domain => domainUGList(domainObj%index)
 
      if( size(pelist(:)).NE.size(domain%list(:)) ) &
          call mpp_error( FATAL, 'mpp_get_UG_domain_pelist: pelist array size does not match domain.' )
@@ -507,11 +539,13 @@ return
   end subroutine mpp_get_UG_domain_pelist
 
   !###################################################################
-  subroutine mpp_get_UG_domain_tile_pe_inf( domain, root_pe, npes, pelist)
-     type(domainUG),     intent(in) :: domain
+  subroutine mpp_get_UG_domain_tile_pe_inf( domainObj, root_pe, npes, pelist)
+     type(domainUG),     intent(in) :: domainObj
      integer, optional, intent(out) :: root_pe, npes
      integer, optional, intent(out) :: pelist(:)
+     type(domainUG_private), pointer :: domain=> NULL()
 
+     domain => domainUGList(domainObj%index)
      if(present(root_pe)) root_pe = domain%tile_root_pe
      if(present(npes)) root_pe = domain%tile_npes
 
@@ -526,9 +560,12 @@ return
 
 
   !####################################################################
-  subroutine mpp_get_UG_domain_grid_index( domain, grid_index)
-     type(domainUG), intent(in) :: domain
+  subroutine mpp_get_UG_domain_grid_index( domainObj, grid_index)
+     type(domainUG), intent(in) :: domainObj
      integer,              intent(out) :: grid_index(:)
+     type(domainUG_private), pointer :: domain=> NULL()
+
+     domain => domainUGList(domainObj%index)
 
      if( size(grid_index(:)).NE.size(domain%grid_index(:)) ) &
          call mpp_error( FATAL, 'mpp_get_UG_domain_grid_index: grid_index array size does not match domain.' )
@@ -539,8 +576,14 @@ return
   end subroutine mpp_get_UG_domain_grid_index
 
   !###################################################################
-  subroutine mpp_define_null_UG_domain(domain)
-     type(domainUG), intent(inout) :: domain
+  subroutine mpp_define_null_UG_domain(domainObj)
+     type(domainUG), intent(inout) :: domainObj
+     type(domainUG_private), pointer :: domain=>NULL();
+
+     cur_domainUG_index = cur_domainUG_index+1
+     domainObj%index = cur_domainUG_index
+     call check_domainUG_index(domainObj, "mpp_define_null_UG_domain")
+     domain => domainUGList(domainObj%index)
 
      domain%global%begin  = -1; domain%global%end  = -1; domain%global%size = 0
      domain%compute%begin = -1; domain%compute%end = -1; domain%compute%size = 0
@@ -553,15 +596,16 @@ return
   end subroutine mpp_define_null_UG_domain
 
 !##############################################################################
-    subroutine mpp_broadcast_domain_ug( domain )
+    subroutine mpp_broadcast_domain_ug( domainObj )
 !broadcast domain (useful only outside the context of its own pelist)
-      type(domainUG), intent(inout) :: domain
+      type(domainUG), intent(inout) :: domainObj
       integer, allocatable :: pes(:)
       logical :: native         !true if I'm on the pelist of this domain
       integer :: listsize, listpos
       integer :: n
       integer, dimension(5) :: msg, info         !pe and compute domain of each item in list
       integer                :: errunit
+      type(domainUG_private), pointer :: domain=>NULL()
 
       errunit = stderr()
       if( .NOT.module_is_initialized ) &
@@ -572,12 +616,17 @@ return
       call mpp_get_current_pelist(pes)
 
 !am I part of this domain?
-      native = ASSOCIATED(domain%list)
+      native = domainObj%index > 0
 
 !set local list size
       if( native )then
+          domain => domainUGList(domainObj%index)
           listsize = size(domain%list(:))
       else
+          cur_domainUG_index = cur_domainUG_index+1
+          domainObj%index = cur_domainUG_index
+          call check_domainUG_index(domainObj, "mpp_broadcast_domain_ug")
+          domain => domainUGList(domainObj%index)
           listsize = 0
       end if
       call mpp_max(listsize)
@@ -599,7 +648,7 @@ return
       info(1) = domain%pe
       info(2) = domain%pos
       info(3) = domain%tile_id
-      call mpp_get_UG_compute_domain( domain, info(4), info(5))
+      call mpp_get_UG_compute_domain( domainObj, info(4), info(5))
 !broadcast your info across current pelist and unpack if needed
       listpos = 0
       do n = 0,mpp_npes()-1
@@ -628,7 +677,7 @@ function mpp_domain_UG_is_tile_root_pe(domain) result(is_root)
     type(domainUG),intent(in) :: domain
     logical(INT_KIND)         :: is_root
 
-    if (domain%pe .eq. domain%tile_root_pe) then
+    if (domainUGList(domain%index)%pe .eq. domainUGList(domain%index)%tile_root_pe) then
         is_root = .true.
     else
         is_root = .false.
@@ -647,7 +696,7 @@ function mpp_get_io_domain_UG_layout(domain) result(io_layout)
     type(domainUG),intent(in) :: domain
     integer(INT_KIND)         :: io_layout
 
-    io_layout = domain%io_layout
+    io_layout = domainUGList(domain%index)%io_layout
 
     return
 end function
@@ -680,26 +729,30 @@ subroutine deallocate_unstruct_pass_type(passobj)
 end subroutine deallocate_unstruct_pass_type
 
 !------------------------------------------------------------------
-subroutine mpp_deallocate_domainUG(domain)
+subroutine mpp_deallocate_domainUG(domainObj)
 
    !<Inputs/Outputs
-    type(domainUG),intent(inout) :: domain
+    type(domainUG),intent(inout) :: domainObj
 
    !<Local variables
     integer(INT_KIND) :: i !<Loop variable.
+    type(domainUG_private), pointer :: domain=>NULL()
+    type(domainUG_private), pointer :: io_domain=>NULL()
+
+    domain=>domainUGList(domainObj%index)
 
     if (associated(domain%list)) then
         deallocate(domain%list)
         domain%list => null()
     endif
 
-    if (associated(domain%io_domain)) then
-        if (associated(domain%io_domain%list)) then
-            deallocate(domain%io_domain%list)
-            domain%io_domain%list => null()
+    if (domain%io_domain_index >0) then
+       io_domain => domainUGList(domain%io_domain_index)
+        if (associated(io_domain%list)) then
+            deallocate(io_domain%list)
+            io_domain%list => null()
         endif
-        deallocate(domain%io_domain)
-        domain%io_domain => null()
+        domain%io_domain_index = 0
     endif
 
     call deallocate_unstruct_pass_type(domain%SG2UG)
@@ -710,9 +763,7 @@ subroutine mpp_deallocate_domainUG(domain)
         domain%grid_index => null()
     endif
 
-    if (associated(domain%SG_domain)) then
-        domain%SG_domain => null()
-    endif
+    domain%SG_domain_index = 0
 
     return
 end subroutine mpp_deallocate_domainUG
@@ -723,37 +774,7 @@ end subroutine mpp_deallocate_domainUG
     logical                    :: mpp_domainUG_eq
     type(domainUG), intent(in) :: a, b
 
-    if (associated(a%SG_domain) .and. associated(b%SG_domain)) then
-        if (a%SG_domain .ne. b%SG_domain) then
-            mpp_domainUG_eq = .false.
-            return
-        endif
-    elseif (associated(a%SG_domain) .and. .not. associated(b%SG_domain)) then
-        mpp_domainUG_eq = .false.
-        return
-    elseif (.not. associated(a%SG_domain) .and. associated(b%SG_domain)) then
-        mpp_domainUG_eq = .false.
-        return
-    endif
-
-    mpp_domainUG_eq = (a%npes_io_group .EQ. b%npes_io_group) .AND. &
-                      (a%pos .EQ. b%pos)                     .AND. &
-                      (a%ntiles .EQ. b%ntiles)               .AND. &
-                      (a%tile_id .EQ. b%tile_id)             .AND. &
-                      (a%tile_npes .EQ. b%tile_npes)         .AND. &
-                      (a%tile_root_pe .EQ. b%tile_root_pe) 
-
-    if(.not. mpp_domainUG_eq) return
-
-    mpp_domainUG_eq = ( a%compute%begin.EQ.b%compute%begin .AND. &
-         a%compute%end  .EQ.b%compute%end   .AND. &
-         a%global%begin .EQ.b%global%begin  .AND. &
-         a%global%end   .EQ.b%global%end    .AND. &
-         a%SG2UG%nsend  .EQ.b%SG2UG%nsend   .AND. &
-         a%SG2UG%nrecv  .EQ.b%SG2UG%nrecv   .AND. &    
-         a%UG2SG%nsend  .EQ.b%UG2SG%nsend   .AND. &    
-         a%UG2SG%nrecv  .EQ.b%UG2SG%nrecv         &
-    )
+    mpp_domainUG_eq = a%index == b%index
     
     return
   end function mpp_domainUG_eq
@@ -784,21 +805,26 @@ subroutine mpp_pass_SG_to_UG_2D(UG_domain, field_SG, field_UG)
 end subroutine mpp_pass_SG_to_UG_2D
 
 !##############################################################################
-SUBROUTINE mpp_pass_SG_to_UG_3D(UG_domain, field_SG, field_UG)
-  type(domainUG), intent(in) :: UG_domain
+SUBROUTINE mpp_pass_SG_to_UG_3D(UG_domainObj, field_SG, field_UG)
+  type(domainUG), intent(in) :: UG_domainObj
   class(*),    intent(inout) :: field_UG(:,:)
   class(*),       intent(in) :: field_SG(:,:,:)
   integer :: ioff, joff
+  type(domainUG_private), pointer :: UG_domain=>NULL()
+  type(domain2D_private), pointer :: SG_domain=>NULL()
+  
+  UG_domain => domainUGList(UG_domainObj%index)
+  SG_domain => domainList(UG_domain%sg_domain_index)
 
   !--- check if data is on data or computing domain
-  if(size(field_SG,1) .EQ. UG_domain%SG_domain%x(1)%compute%size .AND.  &
-     size(field_SG,2) .EQ. UG_domain%SG_domain%y(1)%compute%size) then
-     ioff = 1 - UG_domain%SG_domain%x(1)%compute%begin
-     joff = 1 - UG_domain%SG_domain%y(1)%compute%begin
-  else if(size(field_SG,1) .EQ. UG_domain%SG_domain%x(1)%data%size .AND.  &
-          size(field_SG,2) .EQ. UG_domain%SG_domain%y(1)%data%size) then
-     ioff = 1 - UG_domain%SG_domain%x(1)%data%begin
-     joff = 1 - UG_domain%SG_domain%y(1)%data%begin
+  if(size(field_SG,1) .EQ. SG_domain%x(1)%compute%size .AND.  &
+     size(field_SG,2) .EQ. SG_domain%y(1)%compute%size) then
+     ioff = 1 - SG_domain%x(1)%compute%begin
+     joff = 1 - SG_domain%y(1)%compute%begin
+  else if(size(field_SG,1) .EQ. SG_domain%x(1)%data%size .AND.  &
+          size(field_SG,2) .EQ. SG_domain%y(1)%data%size) then
+     ioff = 1 - SG_domain%x(1)%data%begin
+     joff = 1 - SG_domain%y(1)%data%begin
   else
      call mpp_error( FATAL, 'mpp_pass_SG_to_UG_3D_: field_SG must match either compute domain or data domain.' )
   endif
@@ -819,7 +845,7 @@ end SUBROUTINE mpp_pass_SG_to_UG_3D
 
 !##############################################################################
 subroutine do_pass_SG_to_UG_r8(UG_domain, field_SG, field_UG, ioff, joff)
-  type(domainUG),       intent(in) :: UG_domain
+  type(domainUG_private),       intent(in) :: UG_domain
   real(DOUBLE_KIND), intent(inout) :: field_UG(:,:)
   real(DOUBLE_KIND),    intent(in) :: field_SG(:,:,:)
   integer,              intent(in) :: ioff, joff
@@ -850,21 +876,26 @@ subroutine mpp_pass_UG_to_SG_2D(UG_domain, field_UG, field_SG)
 end SUBROUTINE mpp_pass_UG_to_SG_2D
 
 !##############################################################################
-SUBROUTINE mpp_pass_UG_to_SG_3D(UG_domain, field_UG, field_SG)
-  type(domainUG), intent(in) :: UG_domain
+SUBROUTINE mpp_pass_UG_to_SG_3D(UG_domainObj, field_UG, field_SG)
+  type(domainUG), intent(in) :: UG_domainObj
   class(*),       intent(in) :: field_UG(:,:)
   class(*),    intent(inout) :: field_SG(:,:,:)
   integer :: ioff, joff
+  type(domainUG_private), pointer :: UG_domain=>NULL()
+  type(domain2D_private), pointer :: SG_domain=>NULL()
+
+  UG_domain => domainUGList(UG_domainObj%index)
+  SG_domain => domainList(UG_domain%sg_domain_index)
 
   !--- check if data is on data or computing domain
-  if(size(field_SG,1) .EQ. UG_domain%SG_domain%x(1)%compute%size .AND.  &
-     size(field_SG,2) .EQ. UG_domain%SG_domain%y(1)%compute%size) then
-     ioff = 1 - UG_domain%SG_domain%x(1)%compute%begin
-     joff = 1 - UG_domain%SG_domain%y(1)%compute%begin
-  else if(size(field_SG,1) .EQ. UG_domain%SG_domain%x(1)%data%size .AND.  &
-          size(field_SG,2) .EQ. UG_domain%SG_domain%y(1)%data%size) then
-     ioff = 1 - UG_domain%SG_domain%x(1)%data%begin
-     joff = 1 - UG_domain%SG_domain%y(1)%data%begin
+  if(size(field_SG,1) .EQ. SG_domain%x(1)%compute%size .AND.  &
+     size(field_SG,2) .EQ. SG_domain%y(1)%compute%size) then
+     ioff = 1 - SG_domain%x(1)%compute%begin
+     joff = 1 - SG_domain%y(1)%compute%begin
+  else if(size(field_SG,1) .EQ. SG_domain%x(1)%data%size .AND.  &
+          size(field_SG,2) .EQ. SG_domain%y(1)%data%size) then
+     ioff = 1 - SG_domain%x(1)%data%begin
+     joff = 1 - SG_domain%y(1)%data%begin
   else
      call mpp_error( FATAL, 'mpp_pass_UG_to_SG_3D_: field_SG must match either compute domain or data domain.' )
   endif
@@ -887,7 +918,7 @@ end SUBROUTINE mpp_pass_UG_to_SG_3D
 
 !##############################################################################
 subroutine do_pass_UG_to_SG_r8(UG_domain, field_UG, field_SG, ioff, joff)
-  type(domainUG),       intent(in) :: UG_domain
+  type(domainUG_private), intent(in) :: UG_domain
   real(DOUBLE_KIND),    intent(in) :: field_UG(:,:)
   real(DOUBLE_KIND), intent(inout) :: field_SG(:,:,:)
   integer,              intent(in) :: ioff, joff
@@ -900,6 +931,22 @@ subroutine do_pass_UG_to_SG_r8(UG_domain, field_UG, field_SG, ioff, joff)
 
 end subroutine do_pass_UG_to_SG_r8
 
+function mpp_domainUG_is_defined(domain)
+   type(domain2d), intent(in) :: domain
+   logical                    :: mpp_domainUG_is_defined
 
+   mpp_domainUG_is_defined = domain%index > 0
+
+end function mpp_domainUG_is_defined
+
+  !####################################################################
+  subroutine check_domainUG_index(domain, msg)
+     type(domainUG),   intent(in) :: domain
+     character(len=*), intent(in) :: msg
+
+     if(domain%index < DOMAINUG_INDEX_START) call mpp_error(FATAL, trim(msg)//": domain%index < DOMAINUG_INDEX_START")
+     if(domain%index > DOMAINUG_INDEX_END) call mpp_error(FATAL, trim(msg)//": domain%index > DOMAINUG_INDEX_END, contact developer" )
+
+  end subroutine check_domainUG_index
 
 

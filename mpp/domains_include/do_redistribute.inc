@@ -1,4 +1,4 @@
-   type(domain2D), pointer :: domain_in, domain_out
+   type(domain2D_private), pointer :: domain_in, domain_out
    integer :: i, j, k, l, n, l_size
    integer :: is, ie, js, je
    integer :: ke

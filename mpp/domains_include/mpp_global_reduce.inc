@@ -21,8 +21,8 @@ function mpp_global_max_2d( domain, field, locus, position )
   return
 end function mpp_global_max_2d
 
-function mpp_global_max_3d( domain, field, locus, position )
-  type(domain2D),     intent(in) :: domain
+function mpp_global_max_3d( domainObj, field, locus, position )
+  type(domain2D),     intent(in) :: domainObj
   class(*),           intent(in) :: field(:,:,:)
   integer, intent(out), optional :: locus(3)
   integer, intent(in),  optional :: position
@@ -32,7 +32,9 @@ function mpp_global_max_3d( domain, field, locus, position )
   integer :: isc, iec, jsc, jec, ioff, joff, nxc, nyc, nxd, nyd
   REAL(DOUBLE_KIND)      :: local
   REAL(DOUBLE_KIND),save :: g_val  ! need storage class w/ global address; not sure whether fn result has required class
-
+  type(domain2d_private), pointer :: domain=>NULL()
+  
+  domain=>domainList(domainObj%index)
   if( .NOT.module_is_initialized )call mpp_error( FATAL, &
           'do_global_max_3d: You must first call mpp_domains_init.' )
   call mpp_get_compute_domain(domain, xsize=nxc, ysize=nyc, position=position )
@@ -198,8 +200,8 @@ function mpp_global_min_2d( domain, field, locus, position )
   return
 end function mpp_global_min_2d
 
-function mpp_global_min_3d( domain, field, locus, position )
-  type(domain2D),     intent(in) :: domain
+function mpp_global_min_3d( domainObj, field, locus, position )
+  type(domain2D),     intent(in) :: domainObj
   class(*),           intent(in) :: field(:,:,:)
   integer, intent(out), optional :: locus(3)
   integer, intent(in),  optional :: position
@@ -209,7 +211,9 @@ function mpp_global_min_3d( domain, field, locus, position )
   integer :: ioff, joff, nxc, nyc, nxd, nyd
   REAL(DOUBLE_KIND)      :: local
   REAL(DOUBLE_KIND),save :: g_val  ! need storage class w/ global address; not sure whether fn result has required class
+  type(domain2d_private), pointer :: domain=>NULL()
 
+  domain=>domainList(domainObj%index)
   if( .NOT.module_is_initialized )call mpp_error( FATAL, &
           'do_global_min_3d: You must first call mpp_domains_init.' )
   call mpp_get_compute_domain(domain, xsize=nxc, ysize=nyc, position=position )
@@ -370,8 +374,8 @@ function mpp_global_sum_2d(domain, field, flags, position, tile_count, overflow_
 
 end function mpp_global_sum_2d
 
-function mpp_global_sum_3d(domain, field, flags, position, tile_count, overflow_check)
-  type(domain2D),    intent(in) :: domain
+function mpp_global_sum_3d(domainObj, field, flags, position, tile_count, overflow_check)
+  type(domain2D),    intent(in) :: domainObj
   class(*), intent(in)          :: field(:,:,:)
   integer, intent(in), optional :: flags
   integer, intent(in), optional :: position
@@ -380,6 +384,9 @@ function mpp_global_sum_3d(domain, field, flags, position, tile_count, overflow_
   real(DOUBLE_KIND)             :: mpp_global_sum_3d
   integer :: ioff,joff, ishift, jshift
   integer :: global_flag, tile, ntile, nlist
+  type(domain2d_private), pointer :: domain=>NULL()
+
+  domain=>domainList(domainObj%index)
 
   if( domain%max_ntile_pe > MAX_TILES ) call mpp_error(FATAL, "mpp_global_sum_core: number of tiles is exceed MAX_TILES")
   ntile     = size(domain%x(:))
@@ -452,7 +459,7 @@ end function mpp_global_sum_5d
 
 function do_global_sum_r8(domain, field, global_flag, &
                           tile, ioff, joff, position, overflow_check) result(global_sum)
-  type(domain2D),    intent(in) :: domain
+  type(domain2D_private), intent(in) :: domain
   real(DOUBLE_KIND), intent(in) :: field(:,:,:)
   integer,           intent(in) :: global_flag, tile, ioff, joff
   integer, intent(in), optional :: position
@@ -467,7 +474,7 @@ end function do_global_sum_r8
 
 function do_global_sum_r4(domain, field, global_flag, &
                           tile, ioff, joff, position, overflow_check) result(global_sum)
-  type(domain2D),    intent(in) :: domain
+  type(domain2D_private), intent(in) :: domain
   real(FLOAT_KIND),  intent(in) :: field(:,:,:)
   integer,           intent(in) :: global_flag, tile, ioff, joff
   integer, intent(in), optional :: position

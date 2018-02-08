@@ -178,7 +178,7 @@
 ! <SUBROUTINE NAME="mpp_check_field_2D" INTERFACE="mpp_check_field">
 !   <IN NAME="field_in" TYPE="real, dimension(:,:)" > </IN>
 ! </SUBROUTINE>
-  subroutine mpp_check_field_2d(field_in, pelist1, pelist2, domain, mesg, &
+  subroutine mpp_check_field_2d(field_in, pelist1, pelist2, domainObj, mesg, &
                                  w_halo, s_halo, e_halo, n_halo,force_abort, position  )
 !  This routine is used to do parallel checking for 2d data between n and m pe. The comparison is
 !  is done on pelist2. When size of pelist2 is 1, we can check the halo; otherwise,
@@ -186,7 +186,7 @@
 
   real, dimension(:,:), intent(in)  :: field_in ! field to be checked
   integer, dimension(:), intent(in) :: pelist1, pelist2 ! pe list for the two groups
-  type(domain2d),        intent(in) :: domain   ! domain for each pe
+  type(domain2d),        intent(in) :: domainObj   ! domain for each pe
   character(len=*),     intent(in)  :: mesg     ! message to be printed out
                                                ! if differences found
   integer, intent(in), optional     :: w_halo,  s_halo, e_halo, n_halo
@@ -195,20 +195,22 @@
                                                     ! found. default value is false.
   integer, intent(in), optional     :: position    ! when domain is symmetry, only value = CENTER is 
                                                    ! implemented. 
+  type(domain2d_private), pointer :: domain=>NULL()
 
+  domain => domainList(domainObj%index)
      if(present(position)) then
         if(position .NE. CENTER .AND. domain%symmetry) call mpp_error(FATAL,  &
            'mpp_check_field: when domain is symmetry, only value CENTER is implemented, contact author')
      endif
 
      if(size(pelist2(:)) == 1) then                 
-        call mpp_check_field_2d_type1(field_in, pelist1, pelist2, domain, mesg, &
+        call check_field_2d_type1(field_in, pelist1, pelist2, domain, mesg, &
                                       w_halo, s_halo, e_halo, n_halo, force_abort )
      else if(size(pelist1(:)) == 1) then
-        call mpp_check_field_2d_type1(field_in, pelist2, pelist1, domain, mesg, &
+        call check_field_2d_type1(field_in, pelist2, pelist1, domain, mesg, &
                                       w_halo, s_halo, e_halo, n_halo, force_abort )
      else if(size(pelist1(:)) .gt. 1 .and. size(pelist2(:)) .gt. 1) then
-        call mpp_check_field_2d_type2(field_in, pelist1, pelist2, domain, mesg, force_abort )
+        call check_field_2d_type2(field_in, pelist1, pelist2, domain, mesg, force_abort )
      else
         call mpp_error(FATAL, 'mpp_check_field: size of both pelists should be greater than 0')
      endif
@@ -218,7 +220,7 @@
 
 !####################################################################################
 
-  subroutine mpp_check_field_2d_type1(field_in, pelist1, pelist2, domain, mesg, &
+  subroutine check_field_2d_type1(field_in, pelist1, pelist2, domain, mesg, &
                                  w_halo, s_halo, e_halo, n_halo,force_abort  )
 !  This routine is used to check field between running on 1 pe (pelist2) and
 !  n pe(pelist1). The need_to_be_checked data is sent to the pelist2 and All the
@@ -226,7 +228,7 @@
 
   real, dimension(:,:), intent(in)  :: field_in ! field to be checked
   integer, dimension(:), intent(in) :: pelist1, pelist2 ! pe list for the two groups
-  type(domain2d),        intent(in) :: domain   ! domain for each pe
+  type(domain2d_private),  intent(in) :: domain   ! domain for each pe
   character(len=*),     intent(in)  :: mesg     ! message to be printed out
                                                ! if differences found      
   integer, intent(in), optional     :: w_halo,  s_halo, e_halo, n_halo
@@ -346,16 +348,16 @@
     
     call mpp_sync()
     
-  end subroutine mpp_check_field_2d_type1
+  end subroutine check_field_2d_type1
   
 !####################################################################
 
-  subroutine mpp_check_field_2d_type2(field_in, pelist1, pelist2, domain, mesg,force_abort)
+  subroutine check_field_2d_type2(field_in, pelist1, pelist2, domain, mesg,force_abort)
 !  This routine is used to check field between running on m pe (root pe) and
 !  n pe. This routine can not check halo.
  
   real, dimension(:,:),  intent(in) :: field_in
-  type(domain2d),        intent(in) :: domain
+  type(domain2d_private),intent(in) :: domain
   integer, dimension(:), intent(in) :: pelist1
   integer, dimension(:), intent(in) :: pelist2
   character(len=*),      intent(in) :: mesg
@@ -365,7 +367,7 @@
   logical                :: check_success, error_exit
   real, dimension(:,:), allocatable :: field1, field2
   integer :: i, j, pe, npes, isd,ied,jsd,jed, is, ie, js, je
-  type(domain2d) :: domain1, domain2
+  type(domain2d_private) :: domain1, domain2
   
     check_success = .TRUE.
     error_exit    = .FALSE.
@@ -387,10 +389,10 @@
     endif
       
 !  broadcast domain
-    call mpp_broadcast_domain(domain1)
-    call mpp_broadcast_domain(domain2)
+    call broadcast_domain_1(domain1)
+    call broadcast_domain_1(domain2)
     
-    call mpp_redistribute(domain1,field_in,domain2,field1)
+    call redistribute_2d(domain1,field_in,domain2,field1)
     
     if(any(pelist2 == pe)) then
         do i =is,ie
@@ -411,10 +413,12 @@
     if(any(pelist2 == pe))    deallocate(field1, field2)
     
     call mpp_sync()
-    
+    call deallocate_domain2D_local(domain1)
+    call deallocate_domain2D_local(domain2)    
+
     return
     
-  end subroutine mpp_check_field_2d_type2
+  end subroutine check_field_2d_type2
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -426,6 +430,19 @@
     subroutine mpp_broadcast_domain_1( domain )
 !broadcast domain (useful only outside the context of its own pelist)
       type(domain2D), intent(inout) :: domain
+
+      if(domain%index == 0) then
+         cur_domain_index = cur_domain_index+1
+         domain%index = cur_domain_index
+         call check_domain2d_index(domain, "mpp_broadcast_domain_1")
+      endif
+      call broadcast_domain_1(domainList(domain%index))
+
+    end subroutine mpp_broadcast_domain_1
+
+    subroutine broadcast_domain_1( domain )
+!broadcast domain (useful only outside the context of its own pelist)
+      type(domain2D_private), intent(inout) :: domain
       integer, allocatable :: pes(:)
       logical :: native         !true if I'm on the pelist of this domain
       integer :: listsize, listpos
@@ -529,7 +546,7 @@
          end if
       end do 
 
-    end subroutine mpp_broadcast_domain_1
+    end subroutine broadcast_domain_1
 
 
 !##############################################################################
@@ -537,6 +554,21 @@
 !broadcast domain (useful only outside the context of its own pelist)
       type(domain2D), intent(in)    :: domain_in
       type(domain2D), intent(inout) :: domain_out
+  
+      if(domain_in%index == 0) call mpp_error( FATAL, 'MPP_BROADCAST_DOMAIN_2: domain_in%index == 0')
+      if(domain_out%index .NE. 0) call mpp_error( FATAL, 'MPP_BROADCAST_DOMAIN_2: domain_out%index .NE. 0')
+      cur_domain_index = cur_domain_index+1
+      domain_out%index = cur_domain_index
+      call check_domain2d_index(domain_out, "mpp_broadcast_domain_2")      
+
+      call broadcast_domain_2(domainList(domain_in%index), domainList(domain_out%index))
+
+    end subroutine mpp_broadcast_domain_2
+
+    subroutine broadcast_domain_2( domain_in, domain_out )
+!broadcast domain (useful only outside the context of its own pelist)
+      type(domain2D_private), intent(in)    :: domain_in
+      type(domain2D_private), intent(inout) :: domain_out
       integer, allocatable :: pes(:)
       integer :: listpos
       integer :: n
@@ -648,5 +680,5 @@
          end if
       end do
 
-    end subroutine mpp_broadcast_domain_2
+    end subroutine broadcast_domain_2
 

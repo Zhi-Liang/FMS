@@ -1,11 +1,11 @@
 ! -*-f90-*-
 
-    function mpp_redistribute_init_comm(domain_in,l_addrs_in, domain_out,l_addrs_out, &
+    function redistribute_init_comm(domain_in,l_addrs_in, domain_out,l_addrs_out, &
                                         isize_in,jsize_in,ksize_in,isize_out,jsize_out,ksize_out) RESULT(d_comm)
       type(DomainCommunicator2D), pointer       :: d_comm
-      type(domain2D),target,      intent(in)    :: domain_in
+      type(domain2D_private),target, intent(in)    :: domain_in
       integer(LONG_KIND),         intent(in)    :: l_addrs_in(:)
-      type(domain2D),target,      intent(in)    :: domain_out
+      type(domain2D_private),target, intent(in)    :: domain_out
       integer(LONG_KIND),         intent(in)    :: l_addrs_out(:)
       integer,                    intent(in)    :: isize_in
       integer,                    intent(in)    :: jsize_in
@@ -177,13 +177,13 @@
 
       d_comm%initialized = .true.
 
-    end function mpp_redistribute_init_comm
+    end function redistribute_init_comm
 
 
-    function mpp_global_field_init_comm(domain,l_addr,isize_g,jsize_g,isize_l, &
+    function global_field_init_comm(domain,l_addr,isize_g,jsize_g,isize_l, &
                                         jsize_l, ksize,l_addr2,flags, position) RESULT(d_comm)
       type(DomainCommunicator2D), pointer       :: d_comm
-      type(domain2D),target,      intent(in)    :: domain
+      type(domain2D_private),target, intent(in)    :: domain
       integer(LONG_KIND),         intent(in)    :: l_addr
       integer,                    intent(in)    :: isize_g
       integer,                    intent(in)    :: jsize_g
@@ -400,7 +400,7 @@
 
       d_comm%initialized = .true.
 
-    end function mpp_global_field_init_comm
+    end function global_field_init_comm
 
     function get_comm(domain_id,l_addr,l_addr2)
       integer(LONG_KIND),intent(in)       :: domain_id

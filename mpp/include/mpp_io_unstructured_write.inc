@@ -24,7 +24,7 @@ subroutine mpp_io_unstructured_write_r_1D(funit, &
 
    !Local variables
     real                                       :: fill           !<Fill value for the inputted field.  This defaults to zero.
-    type(domainUG),pointer                     :: io_domain      !<Pointer to the unstructured I/O domain.
+    type(domainUG)                             :: io_domain      !< the unstructured I/O domain.
     integer(INT_KIND)                          :: io_domain_npes !<The total number of ranks in an I/O domain pelist.
     integer(INT_KIND),dimension(:),allocatable :: pelist         !<A pelist.
     integer(INT_KIND)                          :: nelems         !<Total number of data points (sum(nelems_io)) to be written by the root rank of the pelist.
@@ -57,10 +57,7 @@ subroutine mpp_io_unstructured_write_r_1D(funit, &
         fill = default_data
     endif
 
-   !Point to the I/O domain associated with the inputted unstructured mpp
-   !domain.
-    io_domain => null()
-    io_domain => mpp_get_UG_io_domain(domain)
+    io_domain = mpp_get_UG_io_domain(domain)
 
    !Get the pelist associated with the I/O domain.
     io_domain_npes = mpp_get_UG_domain_npes(io_domain)
@@ -151,7 +148,7 @@ subroutine mpp_io_unstructured_write_r_2D(funit, &
 
    !Local variables
     real                                       :: fill           !<Fill value for the inputted field.  This defaults to zero.
-    type(domainUG),pointer                     :: io_domain      !<Pointer to the unstructured I/O domain.
+    type(domainUG)                             :: io_domain      !<unstructured I/O domain.
     integer(INT_KIND)                          :: io_domain_npes !<The total number of ranks in an I/O domain pelist.
     integer(INT_KIND),dimension(:),allocatable :: pelist         !<A pelist.
     integer(INT_KIND)                          :: dim_size_1     !<Number of data points in the first dimension (size(fdata,1)).
@@ -191,10 +188,7 @@ subroutine mpp_io_unstructured_write_r_2D(funit, &
         fill = default_data
     endif
 
-   !Point to the I/O domain associated with the inputted unstructured mpp
-   !domain.
-    io_domain => null()
-    io_domain => mpp_get_UG_io_domain(domain)
+    io_domain = mpp_get_UG_io_domain(domain)
 
    !Get the pelist associated with the I/O domain.
     io_domain_npes = mpp_get_UG_domain_npes(io_domain)
@@ -309,7 +303,7 @@ subroutine mpp_io_unstructured_write_r_3D(funit, &
 
    !Local variables
     real                                       :: fill           !<Fill value for the inputted field.  This defaults to zero.
-    type(domainUG),pointer                     :: io_domain      !<Pointer to the unstructured I/O domain.
+    type(domainUG)                             :: io_domain      !<unstructured I/O domain.
     integer(INT_KIND)                          :: io_domain_npes !<The total number of ranks in an I/O domain pelist.
     integer(INT_KIND),dimension(:),allocatable :: pelist         !<A pelist.
     integer(INT_KIND)                          :: dim_size_1     !<Number of data points in the first dimension (size(fdata,1)).
@@ -351,10 +345,7 @@ subroutine mpp_io_unstructured_write_r_3D(funit, &
         fill = default_data
     endif
 
-   !Point to the I/O domain associated with the inputted unstructured mpp
-   !domain.
-    io_domain => null()
-    io_domain => mpp_get_UG_io_domain(domain)
+    io_domain = mpp_get_UG_io_domain(domain)
 
    !Get the pelist associated with the I/O domain.
     io_domain_npes = mpp_get_UG_domain_npes(io_domain)
@@ -477,7 +468,7 @@ subroutine mpp_io_unstructured_write_r_4D(funit, &
 
    !Local variables
     real                                       :: fill             !<Fill value for the inputted field.  This defaults to zero.
-    type(domainUG),pointer                     :: io_domain        !<Pointer to the unstructured I/O domain.
+    type(domainUG)                             :: io_domain        !<unstructured I/O domain.
     integer(INT_KIND)                          :: io_domain_npes   !<The total number of ranks in an I/O domain pelist.
     integer(INT_KIND),dimension(:),allocatable :: pelist           !<A pelist.
     integer(INT_KIND),dimension(:),allocatable :: nelems_io        !<Number of grid points in the unstructured dimension for each rank.
@@ -522,10 +513,7 @@ subroutine mpp_io_unstructured_write_r_4D(funit, &
         fill = default_data
     endif
 
-   !Point to the I/O domain associated with the inputted unstructured mpp
-   !domain.
-    io_domain => null()
-    io_domain => mpp_get_UG_io_domain(domain)
+    io_domain = mpp_get_UG_io_domain(domain)
 
    !Get the pelist associated with the I/O domain.
     io_domain_npes = mpp_get_UG_domain_npes(io_domain)

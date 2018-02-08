@@ -25,7 +25,7 @@ subroutine mpp_io_unstructured_read_r_1D(funit, &
 
    !Local variables
     integer(INT_KIND)                          :: threading_flag !<Flag telling whether one or multiple ranks will read the file.  This defaults to MPP_SINGLE.
-    type(domainUG),pointer                     :: io_domain      !<Pointer to the unstructured I/O domain.
+    type(domainUG)                             :: io_domain      !<unstructured I/O domain.
     integer(INT_KIND)                          :: io_domain_npes !<The total number of ranks in an I/O domain pelist.
     integer(INT_KIND),dimension(:),allocatable :: pelist         !<A pelist.
     integer(INT_KIND)                          :: p              !<Loop variable.
@@ -76,18 +76,13 @@ subroutine mpp_io_unstructured_read_r_1D(funit, &
                              axsiz_in=nread)
         elseif (threading_flag .eq. MPP_SINGLE) then
 
-           !For the single-rank, first point to the I/O domain associated with
-           !the inputted unstructured mpp domain.
-            io_domain => null()
-            io_domain => mpp_get_UG_io_domain(domain)
+            io_domain = mpp_get_UG_io_domain(domain)
 
            !Get the pelist associated with the I/O domain.
             io_domain_npes = mpp_get_UG_domain_npes(io_domain)
             allocate(pelist(io_domain_npes))
             call mpp_get_UG_domain_pelist(io_domain, &
                                           pelist)
-            io_domain => null()
-
            !Let only the root rank of the pelist read in the data.
             if (mpp_pe() .eq. pelist(1)) then
                 call read_record(funit, &
@@ -205,7 +200,7 @@ subroutine mpp_io_unstructured_read_r_2D(funit, &
 
    !Local variables
     integer(INT_KIND)                          :: threading_flag !<Flag telling whether one or multiple ranks will read the file.  This defaults to MPP_SINGLE.
-    type(domainUG),pointer                     :: io_domain      !<Pointer to the unstructured I/O domain.
+    type(domainUG)                             :: io_domain      !<unstructured I/O domain.
     integer(INT_KIND)                          :: io_domain_npes !<The total number of ranks in an I/O domain pelist.
     integer(INT_KIND),dimension(:),allocatable :: pelist         !<A pelist.
     integer(INT_KIND)                          :: p              !<Loop variable.
@@ -256,17 +251,13 @@ subroutine mpp_io_unstructured_read_r_2D(funit, &
                              axsiz_in=nread)
         elseif (threading_flag .eq. MPP_SINGLE) then
 
-           !For the single-rank, first point to the I/O domain associated with
-           !the inputted unstructured mpp domain.
-            io_domain => null()
-            io_domain => mpp_get_UG_io_domain(domain)
+            io_domain = mpp_get_UG_io_domain(domain)
 
            !Get the pelist associated with the I/O domain.
             io_domain_npes = mpp_get_UG_domain_npes(io_domain)
             allocate(pelist(io_domain_npes))
             call mpp_get_UG_domain_pelist(io_domain, &
                                           pelist)
-            io_domain => null()
 
            !Let only the root rank of the pelist read in the data.
             if (mpp_pe() .eq. pelist(1)) then
@@ -385,7 +376,7 @@ subroutine mpp_io_unstructured_read_r_3D(funit, &
 
    !Local variables
     integer(INT_KIND)                          :: threading_flag !<Flag telling whether one or multiple ranks will read the file.  This defaults to MPP_SINGLE.
-    type(domainUG),pointer                     :: io_domain      !<Pointer to the unstructured I/O domain.
+    type(domainUG)                             :: io_domain      !<unstructured I/O domain.
     integer(INT_KIND)                          :: io_domain_npes !<The total number of ranks in an I/O domain pelist.
     integer(INT_KIND),dimension(:),allocatable :: pelist         !<A pelist.
     integer(INT_KIND)                          :: p              !<Loop variable.
@@ -436,17 +427,13 @@ subroutine mpp_io_unstructured_read_r_3D(funit, &
                              axsiz_in=nread)
         elseif (threading_flag .eq. MPP_SINGLE) then
 
-           !For the single-rank, first point to the I/O domain associated with
-           !the inputted unstructured mpp domain.
-            io_domain => null()
-            io_domain => mpp_get_UG_io_domain(domain)
+            io_domain = mpp_get_UG_io_domain(domain)
 
            !Get the pelist associated with the I/O domain.
             io_domain_npes = mpp_get_UG_domain_npes(io_domain)
             allocate(pelist(io_domain_npes))
             call mpp_get_UG_domain_pelist(io_domain, &
                                           pelist)
-            io_domain => null()
 
            !Let only the root rank of the pelist read in the data.
             if (mpp_pe() .eq. pelist(1)) then

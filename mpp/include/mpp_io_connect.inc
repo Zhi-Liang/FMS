@@ -185,14 +185,14 @@
       integer :: action_flag, form_flag, access_flag, threading_flag, fileset_flag, length
       integer :: nfiles, tile_id(1), io_layout(2)
       logical :: exists, on_root_pe, dist_file
-      logical :: write_on_this_pe, read_on_this_pe, io_domain_exist
+      logical :: write_on_this_pe, read_on_this_pe, io_domain_exist, io_domainUG_exist
       integer :: ios, nc_pos     !position of .nc in file name
       type(axistype) :: unlim    !used by netCDF with mpp_append
 
 !----------
 !ug support
-      type(domain2d),pointer :: io_domain
-      type(domainUG),pointer :: io_domain_ug
+      type(domain2d) :: io_domain
+      type(domainUG) :: io_domain_ug
       integer(INT_KIND)      :: io_layout_ug
       integer(INT_KIND)      :: tile_id_ug
 !----------
@@ -216,11 +216,6 @@
                          //" present in the same mpp_open call.")
       endif
 
-     !Null initialize the unstructured I/O domain pointer.
-      io_domain => null()
-      io_domain_ug => null()
-!----------
-     
       call mpp_clock_begin(mpp_open_clock)
       if( .NOT.module_is_initialized )call mpp_error( FATAL, 'MPP_OPEN: must first call mpp_io_init.' )
       on_root_pe = mpp_pe() == mpp_root_pe()
@@ -245,15 +240,16 @@
       if( threading_flag.EQ.MPP_SINGLE )fileset_flag = MPP_SINGLE
 
       io_domain_exist = .false.
+      io_domainUG_exist = .false.
       if( PRESENT(domain) ) then
-         io_domain => mpp_get_io_domain(domain)
-         if(associated(io_domain)) io_domain_exist = .true.
+         io_domain = mpp_get_io_domain(domain)
+         if(mpp_domain_is_defined(io_domain)) io_domain_exist = .true.
 
 !----------
 !ug support
       elseif (present(domain_ug)) then
-          io_domain_ug => mpp_get_UG_io_domain(domain_ug)
-          io_domain_exist = .true.
+          io_domain_ug = mpp_get_UG_io_domain(domain_ug)
+          io_domainUG_exist = .true.
 !----------
 
       endif
@@ -276,18 +272,12 @@
       endif   
    
       if( io_domain_exist) then
+          ! in this case, only write out from the root_pe of io_domain.
+          write_on_this_pe = mpp_domain_is_tile_root_pe(io_domain)
+      elseif (io_domainUG_exist) then
+          write_on_this_pe = mpp_domain_UG_is_tile_root_pe(io_domain_ug)
+      endif
 
-!----------
-!ug support
-          if (associated(io_domain)) then
-             ! in this case, only write out from the root_pe of io_domain.
-              write_on_this_pe = mpp_domain_is_tile_root_pe(io_domain)
-          elseif (associated(io_domain_ug)) then
-              write_on_this_pe = mpp_domain_UG_is_tile_root_pe(io_domain_ug)
-          endif
-!----------
-
-      endif 
       if( action_flag == MPP_RDONLY) write_on_this_pe = .false.
       !get a unit number
       if( .NOT. write_on_this_pe .AND. action_flag.NE.MPP_RDONLY .AND. .NOT. io_domain_exist)then
@@ -787,17 +777,6 @@
              call mpp_write_meta( unit, 'NumFilesInSet', ival=nfiles)
           end if
       end if   
-
-!----------
-!ug support
-     !<Nullify local pointers.
-      if (associated(io_domain)) then
-          io_domain => NULL()
-      endif
-      if (associated(io_domain_ug)) then
-          io_domain_ug => null()
-      endif
-!----------
 
       call mpp_clock_end(mpp_open_clock)              
       return
