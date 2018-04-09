@@ -2578,12 +2578,6 @@ CONTAINS
        CALL diag_data_out(file, i, output_fields(i)%buffer, files(file)%last_flush, .TRUE., .TRUE.)
     END DO
     ! Close up this file
-<<<<<<< HEAD
-    IF (files(file)%file_unit .NE. -1) THEN
-        CALL mpp_close(files(file)%file_unit)
-        files(file)%file_unit = -1
-    ENDIF
-=======
     IF ( files(file)%file_unit.NE.-1 ) then
       ! File is stil open.  This is to protect when the diag_table has no Fields
       ! going to this file, and it was never opened (b/c diag_data_out was not
@@ -2591,7 +2585,6 @@ CONTAINS
       CALL mpp_close(files(file)%file_unit)
       files(file)%file_unit = -1
     END IF
->>>>>>> dev/master
   END SUBROUTINE write_static
   ! </SUBROUTINE>
 
