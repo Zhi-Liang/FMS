@@ -195,7 +195,7 @@ use iso_c_binding
           var=real_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
            if (u_flag == 1 .AND. attribute.ne."fillvalue" .and. convert_flag > 0) then
-                var=convert_float (trim(theunits)//C_NULL_CHAR, var)
+                var=convert_float (trim(theunits)//C_NULL_CHAR, real(var))
            endif
    type is (logical)
      !> If scalar logical, use C function int_jsonscalar to get the value of var
@@ -359,7 +359,7 @@ IF (strcase(val) == "value") then
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(attribute).ne."fillvalue" .AND. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, rp(ii))
+                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, real(rp(ii)))
            endif
           CC = CC + 1
      enddo
@@ -492,7 +492,7 @@ ELSE !> If it's some other array being requested
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(val).ne."fillvalue" .AND. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, rp(ii))
+                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, real(rp(ii)))
            endif
           CC = CC + 1
      enddo
@@ -1033,7 +1033,7 @@ endif
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(varcheck)//C_NULL_CHAR,CC)
            if (u_flag == 1 .and. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, rp(ii))
+                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, real(rp(ii)))
            endif
         endif
         CC = CC + 1
