@@ -39,8 +39,6 @@
    if (.not.read_all_pe) then
       ! did not read on all PEs need to broadcast data
       len = size(gdata,1)*size(gdata,2)
-!           call mpp_transmit ( gdata, len, ALL_PES, &
-!                               gdata, len, 0        ) 
       call mpp_broadcast ( gdata, len, mpp_root_pe() )      
    endif
    if(.not. no_halo .or. read_data_bug) then

@@ -151,7 +151,7 @@ module mpp_domains_mod
   use mpp_data_mod,           only : mpp_domains_stack, ptr_domains_stack
   use mpp_data_mod,           only : mpp_domains_stack_nonblock, ptr_domains_stack_nonblock
   use mpp_mod,                only : mpp_pe, mpp_root_pe, mpp_npes, mpp_error, FATAL, WARNING, NOTE
-  use mpp_mod,                only : stdout, stderr, stdlog, mpp_send, mpp_recv, mpp_transmit, mpp_sync_self
+  use mpp_mod,                only : stdout, stderr, stdlog, mpp_send, mpp_recv, mpp_sync_self
   use mpp_mod,                only : mpp_clock_id, mpp_clock_begin, mpp_clock_end
   use mpp_mod,                only : mpp_max, mpp_min, mpp_sum, mpp_get_current_pelist, mpp_broadcast
   use mpp_mod,                only : mpp_sync, mpp_init, mpp_malloc, lowercase

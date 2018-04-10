@@ -31,7 +31,7 @@ program test   !test various aspects of mpp_mod
   use mpp_mod, only : mpp_init, mpp_exit, mpp_pe, mpp_npes, mpp_root_pe, stdout
   use mpp_mod, only : mpp_clock_id, mpp_clock_begin, mpp_clock_end, mpp_sync, mpp_malloc
   use mpp_mod, only : mpp_declare_pelist, mpp_set_current_pelist, mpp_set_stack_size
-  use mpp_mod, only : mpp_broadcast, mpp_transmit, mpp_sum, mpp_max, mpp_chksum, ALL_PES
+  use mpp_mod, only : mpp_broadcast, mpp_sum, mpp_max, mpp_chksum, ALL_PES
   use mpp_mod, only : mpp_gather, mpp_error, FATAL, mpp_sync_self
   use mpp_io_mod, only: mpp_io_init, mpp_flush
 #ifdef use_MPI_GSM
@@ -82,23 +82,22 @@ program test   !test various aspects of mpp_mod
   !   time transmit, compare against shmem_put and get                  !
   !---------------------------------------------------------------------!
   if( pe.EQ.root )then
-     print *, 'Time mpp_transmit for various lengths...'
+     print *, 'Time mpp_send/mpp_recv for various lengths...'
 #ifdef SGICRAY
      print *, 'For comparison, times for shmem_get and shmem_put are also provided.'
 #endif
      print *
   end if
-  id = mpp_clock_id( 'mpp_transmit' )
+  id = mpp_clock_id( 'mpp_send_recv' )
   call mpp_clock_begin(id)
   !timing is done for cyclical pass (more useful than ping-pong etc)
   l = n
   do while( l.GT.0 )
-     !--- mpp_transmit -------------------------------------------------
      call mpp_sync()
      call SYSTEM_CLOCK(tick0)
      do i = 1,npes
-        call mpp_transmit( put_data=a(1), plen=l, to_pe=modulo(pe+npes-i,npes), &
-                           get_data=b(1), glen=l, from_pe=modulo(pe+i,npes) )
+        call mpp_send(a(1),l,modulo(pe+npes-i,npes))
+        call mpp_recv(b(1),l,modulo(pe+i,npes))
         call mpp_sync_self()
         !          call mpp_sync_self( (/modulo(pe+npes-i,npes)/) )
      end do
@@ -106,7 +105,7 @@ program test   !test various aspects of mpp_mod
      call SYSTEM_CLOCK(tick)
      dt = real(tick-tick0)/(npes*ticks_per_sec)
      dt = max( dt, epsilon(dt) )
-     if( pe.EQ.root )write( out_unit,'(/a,i8,f13.6,f8.2)' )'MPP_TRANSMIT length, time, bw(Mb/s)=', l, dt, l*8e-6/dt
+     if( pe.EQ.root )write( out_unit,'(/a,i8,f13.6,f8.2)' )'MPP_SEND/RECV length, time, bw(Mb/s)=', l, dt, l*8e-6/dt
 !#ifdef SGICRAY
 !     !--- shmem_put ----------------------------------------------------
 !     call mpp_sync()
@@ -193,11 +192,7 @@ program test   !test various aspects of mpp_mod
      if( pe.EQ.root )call random_number(a(1:n2))
 !    if( pe.EQ.root )call random_number(a)
      call mpp_sync()
-     call mpp_transmit( put_data=a(1), plen=n2, to_pe=ALL_PES, &
-                        get_data=a(1), glen=n2, from_pe=root )
-     call mpp_sync_self ()
-!    call mpp_transmit( put_data=a(1), plen=n, to_pe=ALL_PES, &
-!                       get_data=a(1), glen=n, from_pe=root )
+     call mpp_broadcast(a(1),n2,root)
      m= n2/npes
 !    m= n/npes
      allocate( c(m) )

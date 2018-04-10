@@ -163,8 +163,8 @@
              rpos = from_pe - root_pe ! for concurrent run, root_pe may not be 0.
              nwords = (domain%list(rpos)%x(1)%compute%size+ishift) * (domain%list(rpos)%y(1)%compute%size+jshift) * ke
            ! Force use of scalar, integer ptr interface
-             call mpp_transmit( put_data=clocal(1), plen=nword_me, to_pe=domain%x(1)%list(lpos)%pe, &
-                                get_data=cremote(1), glen=nwords, from_pe=from_pe )
+             call mpp_send(clocal(1),nword_me,domain%x(1)%list(lpos)%pe)
+             call mpp_recv(cremote(1),nwords,from_pe)
              m = 0
              is = domain%list(rpos)%x(1)%compute%begin; ie = domain%list(rpos)%x(1)%compute%end+ishift
              do k = 1, ke
@@ -187,8 +187,8 @@
              nwords = (domain%list(rpos)%x(1)%compute%size+ishift) &
                     * (domain%list(rpos)%y(1)%compute%size+jshift) * ke
            ! Force use of scalar, integer pointer interface
-             call mpp_transmit( put_data=clocal(1), plen=nword_me, to_pe=domain%y(1)%list(lpos)%pe, &
-                                get_data=cremote(1), glen=nwords, from_pe=from_pe )
+             call mpp_send(clocal(1),nword_me,domain%y(1)%list(lpos)%pe)
+             call mpp_recv(cremote(1),nwords,from_pe)
              m = 0
              js = domain%list(rpos)%y(1)%compute%begin; je = domain%list(rpos)%y(1)%compute%end+jshift
              do k = 1,ke

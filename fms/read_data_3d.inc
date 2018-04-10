@@ -37,8 +37,6 @@
    if (.not.read_all_pe) then
          ! did not read on all PEs need to broadcast data
       len = size(gdata,1)*size(gdata,2)*size(gdata,3)
-!           call mpp_transmit ( gdata, len, ALL_PES, &
-!                               gdata, len, 0        ) 
       call mpp_broadcast ( gdata, len, mpp_root_pe() )      
    endif
 ! return data for compute domain
