@@ -48,10 +48,10 @@ ELSE !> If MPI is not initialized, no processor number is given in message
      write (stdout,'(a)')"WARNING (mpi not initialized): "//trim(routine)//": "//trim(message)
  elseif (level == FATAL  ) then
      write (stdout,'(a)')"FATAL (mpi not initialized): "//trim(routine)//": "//trim(message)
-     call ABORT(trim(routine))
+     call ABORT
  else
      write (stdout,'(a)')"ERROR LEVEL UNKNOWN (mpi not initialized): "//trim(routine)//": "//trim(message)
-     call ABORT(trim(routine))
+     call ABORT
  endif
 ENDIF
 end subroutine cjson_error_mesg
