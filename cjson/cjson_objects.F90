@@ -158,6 +158,7 @@ use iso_c_binding
  character (len=:),allocatable          :: units
  integer                                :: u_flag      !> \param u_flag 1 if there are units, 0 if there are not
  real                                   :: convert_flag!< \param convert_flag -1.0 if units are not convertable
+ integer                                :: iflag       !> \param iflag Tells if something is true or false
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  units="units"
  u_flag= existval( cjson, trim(nmlname)//C_NULL_CHAR , trim(varname)//C_NULL_CHAR, &
@@ -198,9 +199,13 @@ use iso_c_binding
            endif
    type is (logical)
      !> If scalar logical, use C function int_jsonscalar to get the value of var
-          var=int_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
+          iflag = int_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
-
+          if (iflag == 0) then
+              var = .false.
+          else
+              var = .true.
+          endif
  end select
 
 end subroutine cjsonObject_scalar_value
@@ -276,6 +281,7 @@ use iso_c_binding
  character (len=:),allocatable          :: units
  integer                                :: u_flag      !< \param u_flag 1 if there are units, 0 if there are not
  real                                   :: convert_flag!< \param convert_flag -1.0 if units are not convertable
+ integer                                :: iflag       !> \param iflag Tells if something is true
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  units="units"
  u_flag= existval( cjson, trim(nmlname)//C_NULL_CHAR , trim(varname)//C_NULL_CHAR, &
@@ -363,8 +369,13 @@ IF (strcase(val) == "value") then
      lp(ilowB:) => var
      !> If scalar logical, use C function int_jsonarray to get the value of var
      do ii = ilowB , array_loop
-          lp(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
+          iflag = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
+          if (iflag == 0) then
+             lp(ii) = .false.
+          else
+             lp(ii) = .true.
+          endif
           CC = CC + 1
      enddo
      !> Check to see if there are any single values of the array in the json
@@ -490,8 +501,13 @@ ELSE !> If it's some other array being requested
      lp(ilowB:) => var
      !> If scalar logical, use C function int_jsonarray to get the value of var
      do ii = ilowB , array_loop
-          lp(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
+          iflag = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
+          if (iflag == 0) then
+             lp(ii) = .false.
+          else
+             lp(ii) = .true.
+          endif
           CC = CC + 1
      enddo
       end select
@@ -907,6 +923,7 @@ use iso_c_binding
  integer                           :: u_flag      !< \param u_flag 1 if there are units, 0 if there are not
  real                              :: convert_flag!< \param convert_flag -1.0 if units are not convertable
  character*10                      :: mins,maxs
+ integer                           :: iflag       !> \param iflag Tells if something is true
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  units="units"
  u_flag= existval( cjson, trim(nmlname)//C_NULL_CHAR , trim(varname)//C_NULL_CHAR, &
@@ -1027,8 +1044,13 @@ endif
      !> If scalar logical, use C function int_jsonarray to get the value of var
      do ii = begin , array_loop
         if (ii >= ilowB) then
-          lp(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
+          iflag = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(varcheck)//C_NULL_CHAR,CC)
+          if (iflag == 0) then
+             lp(ii) = .false.
+          else
+             lp(ii) = .true.
+          endif
         endif
         CC = CC + 1
      enddo
