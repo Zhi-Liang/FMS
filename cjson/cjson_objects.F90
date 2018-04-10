@@ -117,7 +117,7 @@ include 'mpif.h'
            real  (kind=c_float), VALUE :: variable !< The current value of the variable
          end function
 
-         real(kind=8)  function convert_check_dble (input_unit, variable) bind(C, name="convert_check")
+         real(kind=8)  function convert_check_dble (input_unit, variable) bind(C, name="convert_check_dble")
            use iso_c_binding
            character(kind=c_char) :: input_unit !< The units being checked
            real  (kind=c_double), VALUE :: variable !< The current value of the variable
@@ -1248,7 +1248,7 @@ subroutine areUnitsConvert (theunits,nmlname,varname,rp)
  character(*),intent(IN)        :: varname      !< The name of the variable of interest
  real,intent(OUT)               :: rp           !> \param rp The flag to see if the units are convertable
  rp=100.0
-                 rp = convert_check (trim(theunits)//C_NULL_CHAR, rp)
+!                 rp = convert_check (trim(theunits)//C_NULL_CHAR, rp)
      if (rp == -1.0) then  
  CALL cjson_error_mesg('cjson_object_mod', "The units "//trim(theunits)//" in the json object "//nmlname//&
  "{"//varname//"}"//" is not a convertable unit." ,NOTE)
