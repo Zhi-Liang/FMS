@@ -104,10 +104,10 @@ include 'mpif.h'
            real  (kind=c_float), VALUE :: variable !< The current value of the variable
          end function
 
-         real*8  function convert_double  (input_unit, variable) bind(C, name="convert_double")
+         real(kind=8)  function convert_double  (input_unit, variable) bind(C, name="convert_double")
            use iso_c_binding
            character(kind=c_char) :: input_unit !< The units being checked
-           real*8 (kind=c_double), VALUE :: variable !< The current value of the variable
+           real (kind=c_double), VALUE :: variable !< The current value of the variable
          end function
 
 
@@ -117,10 +117,10 @@ include 'mpif.h'
            real  (kind=c_float), VALUE :: variable !< The current value of the variable
          end function
 
-         real*8  function convert_check_dble (input_unit, variable) bind(C, name="convert_check")
+         real(kind=8)  function convert_check_dble (input_unit, variable) bind(C, name="convert_check")
            use iso_c_binding
            character(kind=c_char) :: input_unit !< The units being checked
-           real*8  (kind=c_float), VALUE :: variable !< The current value of the variable
+           real  (kind=c_double), VALUE :: variable !< The current value of the variable
          end function
 
 
