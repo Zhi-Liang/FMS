@@ -2761,10 +2761,10 @@ subroutine save_compressed_restart(fileObj,restartpath,append,time_level)
               check_val(k) = fileObj%p0di(k,j)%p
               cpack = 0  ! Write data as integer*4
            else if ( Associated(fileObj%p1di(k,j)%p) ) then
-              check_val(k) = mpp_chksum(fileObj%p1di(k,j)%p(:), mask_val=cur_var%default_data)
+              check_val(k) = mpp_chksum(fileObj%p1di(k,j)%p(:), mask_val=MPP_FILL_INT)
               cpack = 0  ! Write data as integer*4
            else if ( Associated(fileObj%p2di(k,j)%p) ) then
-              check_val(k) = mpp_chksum(fileObj%p2di(k,j)%p(:,:), mask_val=cur_var%default_data)
+              check_val(k) = mpp_chksum(fileObj%p2di(k,j)%p(:,:), mask_val=MPP_FILL_INT)
               cpack = 0  ! Write data as integer*4
            else if ( Associated(fileObj%p3di(k,j)%p) ) then
               call mpp_error(FATAL, "fms_io(save_compressed_restart): integer 3D restart fields are not currently supported"// &

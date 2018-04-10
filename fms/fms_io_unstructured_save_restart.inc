@@ -486,11 +486,11 @@ subroutine fms_io_unstructured_save_restart(fileObj, &
                     cpack = 0
                 elseif (associated(fileObj%p1di(k,j)%p)) then
                     check_val(k) = mpp_chksum(fileObj%p1di(k,j)%p, &
-                                              mask_val=cur_var%default_data)
+                                              mask_val=MPP_FILL_INT)
                     cpack = 0
                 elseif (associated(fileObj%p2di(k,j)%p)) then
                     check_val(k) = mpp_chksum(fileObj%p2di(k,j)%p, &
-                                              mask_val=cur_var%default_data)
+                                              mask_val=MPP_FILL_INT)
                     cpack = 0
                 elseif (associated(fileObj%p3di(k,j)%p)) then
                     call mpp_error(FATAL, &

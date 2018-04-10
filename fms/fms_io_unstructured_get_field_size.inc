@@ -145,6 +145,7 @@ subroutine fms_io_unstructured_get_field_size(filename, &
     if (mpp_pe() .eq. pelist(1)) then
         do i = 2,io_domain_npes
             call mpp_send(found, &
+                          1, &
                           pelist(i), &
                           tag=COMM_TAG_1)
             call mpp_send(field_dimension_sizes, &
@@ -155,6 +156,7 @@ subroutine fms_io_unstructured_get_field_size(filename, &
         call mpp_sync_self()
     else
         call mpp_recv(found, &
+                      1, &
                       pelist(1), &
                       block = .false., &
                       tag=COMM_TAG_1)
