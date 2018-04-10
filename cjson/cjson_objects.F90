@@ -197,14 +197,14 @@ use iso_c_binding
            if (u_flag == 1 .AND. attribute.ne."fillvalue".and. convert_flag > 0) then
                  var=convert_int (trim(theunits)//C_NULL_CHAR, var)
            endif
-   type is (real*4)
+   type is (real(kind=4))
      !> If scalar real, use C function real_jsonscalar to get the value of var
           var=real_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
            if (u_flag == 1 .AND. attribute.ne."fillvalue" .and. convert_flag > 0) then
                 var=convert_float (trim(theunits)//C_NULL_CHAR, var)
            endif
-   type is (real*8)
+   type is (real(kind=8))
      !> If scalar real, use C function real_jsonscalar to get the value of var
           var=real_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
@@ -286,8 +286,8 @@ use iso_c_binding
  integer                                :: ar_size     !> \param ar_size The size of the array variable
  integer                                :: array_loop  !> \param array_loop The ending point of the loop for the json array
  integer,pointer                        :: ip (:)      !> \param ip an integer array pointer
- real*8,pointer                         :: rp (:)      !> \param rp an real*8 array pointer
- real*4,pointer                         :: r4 (:)      !> \param rp an real*4 array pointer
+ real(kind=8),pointer                   :: rp (:)      !> \param rp an real*8 array pointer
+ real(kind=4),pointer                   :: r4 (:)      !> \param rp an real*4 array pointer
  logical,pointer                        :: lp (:)      !> \param lp an logical array pointer
  character(len=:),pointer               :: sp (:)      !> \param sp an string array pointer
  character(len=100)                     :: string_point!> \param string_point string scalar pointer
@@ -354,7 +354,7 @@ IF (strcase(val) == "value") then
      !> Check to see if there are any single values of the array in the json
        call cjsonObject_inorder_array (cjson,json,ip,nmlname,varname,st_size=st_size,lowB=ilowB)
 !
-   type is (real*4)
+   type is (real(kind=4))
      r4(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = ilowB , array_loop
@@ -366,7 +366,7 @@ IF (strcase(val) == "value") then
           CC = CC + 1
      enddo
        call cjsonObject_inorder_array (cjson,json,rp,nmlname,varname,st_size=st_size,lowB=ilowB)
-   type is (real*8)
+   type is (real(kind=8))
      rp(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = ilowB , array_loop
@@ -408,10 +408,10 @@ IF (strcase(val) == "value") then
    type is (integer)
      ip(ilowB:) => var
        call cjsonObject_inorder_array (cjson,json,ip,nmlname,varname,st_size=st_size,lowb=ilowB)
-   type is (real*4)
+   type is (real(kind=4))
      r4(ilowB:) => var
        call cjsonObject_inorder_array (cjson,json,r4,nmlname,varname,st_size=st_size,lowb=ilowB)
-   type is (real*8)
+   type is (real(kind=8))
      rp(ilowB:) => var
        call cjsonObject_inorder_array (cjson,json,rp,nmlname,varname,st_size=st_size,lowb=ilowB)
    type is (logical)
@@ -429,11 +429,11 @@ ELSEIF (strcase(val) == "fillvalue") then !> If fillvalue is sent into the array
                 !> Get the fillvalue
                 CALL cjsonObject_scalar_value (cjson,ip(ilowB),nmlname,varname,attribute=val) 
                 var = ip(ilowB) !> Fill the array with the fill value
-        type is (real*4)
+        type is (real(kind=4))
                 r4(ilowB:) => var
                 CALL cjsonObject_scalar_value (cjson,r4(ilowB),nmlname,varname,attribute=val)
                 var = r4(ilowB)
-        type is (real*8)
+        type is (real(kind=8))
                 rp(ilowB:) => var
                 CALL cjsonObject_scalar_value (cjson,rp(ilowB),nmlname,varname,attribute=val)
                 var = rp(ilowB)
@@ -488,7 +488,7 @@ ELSE !> If it's some other array being requested
           CC = CC + 1
      enddo
 !
-   type is (real*4)
+   type is (real(kind=4))
      r4(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = ilowB , array_loop
@@ -499,7 +499,7 @@ ELSE !> If it's some other array being requested
            endif
           CC = CC + 1
      enddo
-   type is (real*8)
+   type is (real(kind=8))
      rp(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = ilowB , array_loop
@@ -858,8 +858,8 @@ use iso_c_binding
  integer                                :: issingle    !> \param issingle 1 if there is a single, 
                                                        !! 0 if there isnt
  integer                                :: ip          !> \param ip a integer pointer
- real*4                                 :: r4          !> \param rp a real pointer
- real*8                                 :: rp          !> \param rp a real pointer
+ real(kind=4)                           :: r4          !> \param rp a real pointer
+ real(kind=8)                           :: rp          !> \param rp a real pointer
  logical                                :: lp          !> \param lp a logical pointer
  character,pointer                      :: sp          !> \param lp a string pointer
 
@@ -883,10 +883,10 @@ use iso_c_binding
         type is (integer)
                 CALL cjsonObject_scalar_value (cjson,ip,nmlname,varname,attribute=trim(single))
                 var = ip
-        type is (real*4)
+        type is (real(kind=4))
                 CALL cjsonObject_scalar_value (cjson,r4,nmlname,varname,attribute=trim(single))
                 var = r4
-        type is (real*8)
+        type is (real(kind=8))
                 CALL cjsonObject_scalar_value (cjson,rp,nmlname,varname,attribute=trim(single))
                 var = rp
         type is (logical)
@@ -929,8 +929,8 @@ use iso_c_binding
  integer                           :: ar_size     !> \param ar_size The size of the array variable
  integer                           :: array_loop  !> \param array_loop The ending point of the loop for the json array
  integer,pointer                   :: ip (:)      !> \param ip an integer array pointer
- real*4,pointer                    :: r4 (:)      !> \param r4 a real*4 array pointer
- real*8,pointer                    :: rp (:)      !> \param rp a real*8 array pointer
+ real(kind=4),pointer              :: r4 (:)      !> \param r4 a real*4 array pointer
+ real(kind=8),pointer              :: rp (:)      !> \param rp a real*8 array pointer
  logical,pointer                   :: lp (:)      !> \param lp a logical array pointer
  character (len=10)                :: theunits    !< \param theunits a string of the units if they exist
  character (len=:),allocatable     :: units
@@ -1026,7 +1026,7 @@ endif
         CC = CC + 1
      enddo
 !
-   type is (real*4)
+   type is (real(kind=4))
      r4(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = begin , array_loop
@@ -1039,7 +1039,7 @@ endif
         endif
         CC = CC + 1
      enddo
-   type is (real*8)
+   type is (real(kind=8))
      rp(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = begin , array_loop
@@ -1141,8 +1141,8 @@ use iso_c_binding
  integer                                :: isfillvalue !> \param isfillvalue 1 if there is a fillvalue, 
                                                        !! 0 if there isnt
  integer                                :: ip          !> \param ip a integer pointer
- real*4                                 :: r4          !> \param r4 a real*4 pointer
- real*8                                 :: rp          !> \param rp a real*8 pointer
+ real(kind=4)                           :: r4          !> \param r4 a real*4 pointer
+ real(kind=8)                           :: rp          !> \param rp a real*8 pointer
  logical                                :: lp          !> \param lp a logical pointer
  character(len=100)                     :: st_fill     !> \param lp a string to hold the fillvalue
  character(len=:),allocatable           :: val
@@ -1158,10 +1158,10 @@ use iso_c_binding
         type is (integer)
                 CALL cjsonObject_scalar_value (cjson,ip,nmlname,varname,attribute=fillvalue)
                 var = ip
-        type is (real*4)
+        type is (real(kind=4))
                 CALL cjsonObject_scalar_value (cjson,r4,nmlname,varname,attribute=fillvalue)
                 var = r4
-        type is (real*8)
+        type is (real(kind=8))
                 CALL cjsonObject_scalar_value (cjson,rp,nmlname,varname,attribute=fillvalue)
                 var = rp
         type is (logical)
