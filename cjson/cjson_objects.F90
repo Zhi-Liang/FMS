@@ -104,11 +104,25 @@ include 'mpif.h'
            real  (kind=c_float), VALUE :: variable !< The current value of the variable
          end function
 
+         real*8  function convert_double  (input_unit, variable) bind(C, name="convert_double")
+           use iso_c_binding
+           character(kind=c_char) :: input_unit !< The units being checked
+           real*8 (kind=c_double), VALUE :: variable !< The current value of the variable
+         end function
+
+
          real    function convert_check (input_unit, variable) bind(C, name="convert_check")
            use iso_c_binding
            character(kind=c_char) :: input_unit !< The units being checked
            real  (kind=c_float), VALUE :: variable !< The current value of the variable
          end function
+
+         real*8  function convert_check_dble (input_unit, variable) bind(C, name="convert_check")
+           use iso_c_binding
+           character(kind=c_char) :: input_unit !< The units being checked
+           real*8  (kind=c_float), VALUE :: variable !< The current value of the variable
+         end function
+
 
      end interface
 
@@ -195,7 +209,7 @@ use iso_c_binding
           var=real_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
            if (u_flag == 1 .AND. attribute.ne."fillvalue" .and. convert_flag > 0) then
-                var=convert_float (trim(theunits)//C_NULL_CHAR, real(var))
+                var=convert_double (trim(theunits)//C_NULL_CHAR, var)
            endif
    type is (logical)
      !> If scalar logical, use C function int_jsonscalar to get the value of var
@@ -359,7 +373,7 @@ IF (strcase(val) == "value") then
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(attribute).ne."fillvalue" .AND. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, real(rp(ii)))
+                 rp(ii)=convert_double (trim(theunits)//C_NULL_CHAR, rp(ii))
            endif
           CC = CC + 1
      enddo
@@ -492,7 +506,7 @@ ELSE !> If it's some other array being requested
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(val).ne."fillvalue" .AND. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, real(rp(ii)))
+                 rp(ii)=convert_double (trim(theunits)//C_NULL_CHAR, rp(ii))
            endif
           CC = CC + 1
      enddo
@@ -1033,7 +1047,7 @@ endif
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(varcheck)//C_NULL_CHAR,CC)
            if (u_flag == 1 .and. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, real(rp(ii)))
+                 rp(ii)=convert_double (trim(theunits)//C_NULL_CHAR, rp(ii))
            endif
         endif
         CC = CC + 1
