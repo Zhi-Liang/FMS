@@ -218,7 +218,7 @@ use iso_c_binding
         character(*),intent(in)         :: json         !< A string holding the json
         type(C_PTR),intent(in)          :: cjson        !< A C pointer containing the parsed json
         integer,optional,intent(in)     :: st_size      !< The length of a string
-
+        integer                         :: iflag        !< Tells if something is true or false
         var => nmlval
         select type (var) !> Select the intrinsic type of the namelist variable
    type is (integer)
@@ -232,7 +232,12 @@ use iso_c_binding
        var = real_val(cjson,json//C_NULL_CHAR,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR)
    type is (logical)
      !> If scalar logical, using the integer function integer_val to obtain the variable value
-       var = integer_val(cjson,json//C_NULL_CHAR,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR)
+       iflag = integer_val(cjson,json//C_NULL_CHAR,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR)
+       if (iflag == 0) then
+          var = .false.
+       else
+          var = .true.
+       endif
    type is (character(*))
      !> When the variable is a string, it must have the st_size passed with it.
         if (.not. present (st_size)) call cjson_error_mesg("JSON_SCALAR_VALUE",&
@@ -308,7 +313,7 @@ use iso_c_binding
         integer,intent(in)              :: Cind         !< The C index of the value in the array
         real(kind=8),pointer            :: r8 (:) => null()
         real(kind=4),pointer            :: r4 (:) => null()
-
+        integer                         :: iflag
         var => nmlval
 
  select type (var) !> Select the intrinsic type of the namelist variable
@@ -327,7 +332,12 @@ use iso_c_binding
        nullify (r8)
    type is (logical)
      !> If scalar logical, using the integer function integer_array to obtain the variable value
-        var(ARIND) = integer_array(cjson,json,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,Cind)
+        iflag = integer_array(cjson,json,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,Cind)
+        if (iflag == 0) then
+             var(ARIND) = .false.
+        else
+             var(ARIND) = .true.
+        endif
    type is (character(*))
         if (.not. present (st_size)) call cjson_error_mesg("JSON_ARRAY_VALUE",&
                 nmlname//'{'//varname//"} is a string, but the argument ST_SIZE"//&
@@ -781,10 +791,10 @@ use iso_c_binding
  logical, pointer, dimension (:)        :: larray	!> \param larray Logical 1D array for conversion
  logical, pointer, dimension (:)        :: la		!> \param la logical 1D array for conversion with correc
 
- real(kind=8), pointer, dimension (:,:)	:: re	!> \param re real*8 pointer to var
- real(kind=4), pointer, dimension (:,:)	:: rf	!> \param rf real*4 pointer to var
- integer, pointer, dimension (:,:)	:: ii	!> \param ii integer pointer to var
- logical, pointer, dimension (:,:)	:: ll	!> \param ll logical pointer to var
+ real(kind=8), pointer, dimension (:,:) :: re	!> \param re real*8 pointer to var
+ real(kind=4), pointer, dimension (:,:) :: rf	!> \param rf real*4 pointer to var
+ integer, pointer, dimension (:,:) :: ii	!> \param ii integer pointer to var
+ logical, pointer, dimension (:,:) :: ll	!> \param ll logical pointer to var
 
  var => nmlval !> Point var to the value of the variable from the nml file
 !!> Turn the 2D array into a 1D array fur use with the jsonarray subroutine
