@@ -314,6 +314,8 @@ use iso_c_binding
         real(kind=8),pointer            :: r8 (:) => null()
         real(kind=4),pointer            :: r4 (:) => null()
         integer                         :: iflag
+        character(len=:),allocatable    :: string_holder 
+  
         var => nmlval
 
  select type (var) !> Select the intrinsic type of the namelist variable
@@ -339,11 +341,15 @@ use iso_c_binding
              var(ARIND) = .true.
         endif
    type is (character(*))
-        if (.not. present (st_size)) call cjson_error_mesg("JSON_ARRAY_VALUE",&
+        if (.not. present (st_size)) then 
+                call cjson_error_mesg("JSON_ARRAY_VALUE",&
                 nmlname//'{'//varname//"} is a string, but the argument ST_SIZE"//&
                 " was not included.",FATAL)
-        call json_array_value_string (cjson,json,nmlname,varname,var(arind),Cind,st_size)
-
+        else
+                allocate(character(len=st_size) :: string_holder) 
+        endif
+        call json_array_value_string (cjson,json,nmlname,varname,string_holder,Cind,st_size)
+        var(ARIND) = string_holder
  end select
 end subroutine json_array_value
 !> \author Tom Robinson thomas.robinson@noaa.gov
