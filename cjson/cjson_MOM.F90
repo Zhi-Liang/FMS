@@ -246,7 +246,8 @@ jj=1
  nmllevel = .true.
 !> Parse the lines on the =.  If 2 = are present, then the second is default
  do ii=1,size(lines)
-   allocate (character (len=(len( trim(lines(ii)) )) ) :: line)
+   ll = len( trim(lines(ii)) )
+   allocate (character (len=ll) :: line)
    line=trim( lines(ii) ) 
    lineloop: do jj = 1,len( trim(line) )
         if (len(line) < 4) then
