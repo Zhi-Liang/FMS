@@ -251,16 +251,16 @@ contains
   end subroutine mpp_pset_delete
 
   subroutine mpp_send_ptr_scalar( ptr, pe )
-    integer(POINTER_KIND), intent(in) :: ptr
+    integer(POINTER_KIND), intent(inout) :: ptr
     integer, intent(in) :: pe
 
 !currently only wraps mpp_send
 !on some architectures, mangling might occur
-    call mpp_send( ptr, pe, tag=COMM_TAG_1 )
+    call mpp_send( ptr, 1, pe, tag=COMM_TAG_1 )
   end subroutine mpp_send_ptr_scalar
 
   subroutine mpp_send_ptr_array( ptr, pe )
-    integer(POINTER_KIND), intent(in) :: ptr(:)
+    integer(POINTER_KIND), intent(inout) :: ptr(:)
     integer, intent(in) :: pe
 
 !currently only wraps mpp_send
@@ -272,7 +272,7 @@ contains
     integer(POINTER_KIND), intent(inout) :: ptr
     integer, intent(in) :: pe
 
-    call mpp_recv( ptr, pe, tag=COMM_TAG_1  )
+    call mpp_recv( ptr, 1, pe, tag=COMM_TAG_1  )
     call mpp_translate_remote_ptr( ptr, pe )
     return
   end subroutine mpp_recv_ptr_scalar
@@ -355,10 +355,10 @@ contains
          'MPP_PSET_BROADCAST: called with uninitialized PSET.' )
     if( pset%root )then
         do i = 1,pset%npset-1
-           call mpp_send( a, pset%pset(i), tag=COMM_TAG_3 )
+           call mpp_send( a, 1, pset%pset(i), tag=COMM_TAG_3 )
         end do
     else
-        call mpp_recv( a, pset%root_in_pset, tag=COMM_TAG_3 )
+        call mpp_recv( a, 1, pset%root_in_pset, tag=COMM_TAG_3 )
     end if
     call mpp_pset_sync(pset)
   end subroutine mpp_pset_broadcast
