@@ -421,7 +421,8 @@
    !<Inputs/Outputs
     integer(INT_KIND),intent(in) :: timer_id
 
-    if (timer_id .eq. -1) then
+    !Legacy feature.
+    if (timer_id .eq. 0) then
         return
     endif
 
@@ -437,7 +438,8 @@
    !<Inputs/Outputs
     integer(INT_KIND),intent(in) :: timer_id
 
-    if (timer_id .eq. -1) then
+    !legacy feature.
+    if (timer_id .eq. 0) then
         return
     endif
 
