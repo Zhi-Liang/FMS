@@ -104,11 +104,25 @@ include 'mpif.h'
            real  (kind=c_float), VALUE :: variable !< The current value of the variable
          end function
 
+         real(kind=8)  function convert_double  (input_unit, variable) bind(C, name="convert_double")
+           use iso_c_binding
+           character(kind=c_char) :: input_unit !< The units being checked
+           real (kind=c_double), VALUE :: variable !< The current value of the variable
+         end function
+
+
          real    function convert_check (input_unit, variable) bind(C, name="convert_check")
            use iso_c_binding
            character(kind=c_char) :: input_unit !< The units being checked
            real  (kind=c_float), VALUE :: variable !< The current value of the variable
          end function
+
+         real(kind=8)  function convert_check_dble (input_unit, variable) bind(C, name="convert_check_dble")
+           use iso_c_binding
+           character(kind=c_char) :: input_unit !< The units being checked
+           real  (kind=c_double), VALUE :: variable !< The current value of the variable
+         end function
+
 
      end interface
 
@@ -158,6 +172,7 @@ use iso_c_binding
  character (len=:),allocatable          :: units
  integer                                :: u_flag      !> \param u_flag 1 if there are units, 0 if there are not
  real                                   :: convert_flag!< \param convert_flag -1.0 if units are not convertable
+ integer                                :: iflag       !> \param iflag Tells if something is true or false
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  units="units"
  u_flag= existval( cjson, trim(nmlname)//C_NULL_CHAR , trim(varname)//C_NULL_CHAR, &
@@ -180,27 +195,31 @@ use iso_c_binding
           var=int_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
            if (u_flag == 1 .AND. attribute.ne."fillvalue".and. convert_flag > 0) then
-                 var=convert_int (trim(theunits)//C_NULL_CHAR, var)
+!                 !var=convert_int (trim(theunits)//C_NULL_CHAR, var)
            endif
-   type is (real*4)
+   type is (real(kind=4))
      !> If scalar real, use C function real_jsonscalar to get the value of var
           var=real_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
            if (u_flag == 1 .AND. attribute.ne."fillvalue" .and. convert_flag > 0) then
-                var=convert_float (trim(theunits)//C_NULL_CHAR, var)
+!                !var=convert_float (trim(theunits)//C_NULL_CHAR, var)
            endif
-   type is (real*8)
+   type is (real(kind=8))
      !> If scalar real, use C function real_jsonscalar to get the value of var
           var=real_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
            if (u_flag == 1 .AND. attribute.ne."fillvalue" .and. convert_flag > 0) then
-                var=convert_float (trim(theunits)//C_NULL_CHAR, var)
+!                !var=convert_double (trim(theunits)//C_NULL_CHAR, var)
            endif
    type is (logical)
      !> If scalar logical, use C function int_jsonscalar to get the value of var
-          var=int_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
+          iflag = int_jsonscalar(cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR)
-
+          if (iflag == 0) then
+              var = .false.
+          else
+              var = .true.
+          endif
  end select
 
 end subroutine cjsonObject_scalar_value
@@ -267,8 +286,8 @@ use iso_c_binding
  integer                                :: ar_size     !> \param ar_size The size of the array variable
  integer                                :: array_loop  !> \param array_loop The ending point of the loop for the json array
  integer,pointer                        :: ip (:)      !> \param ip an integer array pointer
- real*8,pointer                         :: rp (:)      !> \param rp an real*8 array pointer
- real*4,pointer                         :: r4 (:)      !> \param rp an real*4 array pointer
+ real(kind=8),pointer                   :: rp (:)      !> \param rp an real*8 array pointer
+ real(kind=4),pointer                   :: r4 (:)      !> \param rp an real*4 array pointer
  logical,pointer                        :: lp (:)      !> \param lp an logical array pointer
  character(len=:),pointer               :: sp (:)      !> \param sp an string array pointer
  character(len=100)                     :: string_point!> \param string_point string scalar pointer
@@ -276,6 +295,7 @@ use iso_c_binding
  character (len=:),allocatable          :: units
  integer                                :: u_flag      !< \param u_flag 1 if there are units, 0 if there are not
  real                                   :: convert_flag!< \param convert_flag -1.0 if units are not convertable
+ integer                                :: iflag       !> \param iflag Tells if something is true
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  units="units"
  u_flag= existval( cjson, trim(nmlname)//C_NULL_CHAR , trim(varname)//C_NULL_CHAR, &
@@ -327,33 +347,33 @@ IF (strcase(val) == "value") then
           ip(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(attribute).ne."fillvalue" .AND. convert_flag > 0) then
-                 ip(ii)=convert_int (trim(theunits)//C_NULL_CHAR, ip(ii))
+!                 ip(ii)=convert_int (trim(theunits)//C_NULL_CHAR, ip(ii))
            endif
           CC = CC + 1
      enddo
      !> Check to see if there are any single values of the array in the json
        call cjsonObject_inorder_array (cjson,json,ip,nmlname,varname,st_size=st_size,lowB=ilowB)
 !
-   type is (real*4)
+   type is (real(kind=4))
      r4(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = ilowB , array_loop
           r4(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(attribute).ne."fillvalue" .AND. convert_flag > 0) then
-                 r4(ii)=convert_float (trim(theunits)//C_NULL_CHAR, r4(ii))
+!                 r4(ii)=convert_float (trim(theunits)//C_NULL_CHAR, r4(ii))
            endif
           CC = CC + 1
      enddo
        call cjsonObject_inorder_array (cjson,json,rp,nmlname,varname,st_size=st_size,lowB=ilowB)
-   type is (real*8)
+   type is (real(kind=8))
      rp(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = ilowB , array_loop
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(attribute).ne."fillvalue" .AND. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, rp(ii))
+!                 rp(ii)=convert_double (trim(theunits)//C_NULL_CHAR, rp(ii))
            endif
           CC = CC + 1
      enddo
@@ -363,8 +383,13 @@ IF (strcase(val) == "value") then
      lp(ilowB:) => var
      !> If scalar logical, use C function int_jsonarray to get the value of var
      do ii = ilowB , array_loop
-          lp(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
+          iflag = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
+          if (iflag == 0) then
+             lp(ii) = .false.
+          else
+             lp(ii) = .true.
+          endif
           CC = CC + 1
      enddo
      !> Check to see if there are any single values of the array in the json
@@ -383,10 +408,10 @@ IF (strcase(val) == "value") then
    type is (integer)
      ip(ilowB:) => var
        call cjsonObject_inorder_array (cjson,json,ip,nmlname,varname,st_size=st_size,lowb=ilowB)
-   type is (real*4)
+   type is (real(kind=4))
      r4(ilowB:) => var
        call cjsonObject_inorder_array (cjson,json,r4,nmlname,varname,st_size=st_size,lowb=ilowB)
-   type is (real*8)
+   type is (real(kind=8))
      rp(ilowB:) => var
        call cjsonObject_inorder_array (cjson,json,rp,nmlname,varname,st_size=st_size,lowb=ilowB)
    type is (logical)
@@ -404,11 +429,11 @@ ELSEIF (strcase(val) == "fillvalue") then !> If fillvalue is sent into the array
                 !> Get the fillvalue
                 CALL cjsonObject_scalar_value (cjson,ip(ilowB),nmlname,varname,attribute=val) 
                 var = ip(ilowB) !> Fill the array with the fill value
-        type is (real*4)
+        type is (real(kind=4))
                 r4(ilowB:) => var
                 CALL cjsonObject_scalar_value (cjson,r4(ilowB),nmlname,varname,attribute=val)
                 var = r4(ilowB)
-        type is (real*8)
+        type is (real(kind=8))
                 rp(ilowB:) => var
                 CALL cjsonObject_scalar_value (cjson,rp(ilowB),nmlname,varname,attribute=val)
                 var = rp(ilowB)
@@ -458,30 +483,30 @@ ELSE !> If it's some other array being requested
           ip(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(val).ne."fillvalue" .AND. convert_flag > 0) then
-                 ip(ii)=convert_int (trim(theunits)//C_NULL_CHAR, ip(ii))
+!                 ip(ii)=convert_int (trim(theunits)//C_NULL_CHAR, ip(ii))
            endif
           CC = CC + 1
      enddo
 !
-   type is (real*4)
+   type is (real(kind=4))
      r4(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = ilowB , array_loop
           r4(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(val).ne."fillvalue" .AND. convert_flag > 0) then
-                 r4(ii)=convert_float (trim(theunits)//C_NULL_CHAR, r4(ii))
+!                 r4(ii)=convert_float (trim(theunits)//C_NULL_CHAR, r4(ii))
            endif
           CC = CC + 1
      enddo
-   type is (real*8)
+   type is (real(kind=8))
      rp(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = ilowB , array_loop
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
            if (u_flag == 1 .AND. strcase(val).ne."fillvalue" .AND. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, rp(ii))
+!                 rp(ii)=convert_double (trim(theunits)//C_NULL_CHAR, rp(ii))
            endif
           CC = CC + 1
      enddo
@@ -490,8 +515,13 @@ ELSE !> If it's some other array being requested
      lp(ilowB:) => var
      !> If scalar logical, use C function int_jsonarray to get the value of var
      do ii = ilowB , array_loop
-          lp(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
+          iflag = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(val)//C_NULL_CHAR,CC)
+          if (iflag == 0) then
+             lp(ii) = .false.
+          else
+             lp(ii) = .true.
+          endif
           CC = CC + 1
      enddo
       end select
@@ -828,8 +858,8 @@ use iso_c_binding
  integer                                :: issingle    !> \param issingle 1 if there is a single, 
                                                        !! 0 if there isnt
  integer                                :: ip          !> \param ip a integer pointer
- real*4                                 :: r4          !> \param rp a real pointer
- real*8                                 :: rp          !> \param rp a real pointer
+ real(kind=4)                           :: r4          !> \param rp a real pointer
+ real(kind=8)                           :: rp          !> \param rp a real pointer
  logical                                :: lp          !> \param lp a logical pointer
  character,pointer                      :: sp          !> \param lp a string pointer
 
@@ -853,10 +883,10 @@ use iso_c_binding
         type is (integer)
                 CALL cjsonObject_scalar_value (cjson,ip,nmlname,varname,attribute=trim(single))
                 var = ip
-        type is (real*4)
+        type is (real(kind=4))
                 CALL cjsonObject_scalar_value (cjson,r4,nmlname,varname,attribute=trim(single))
                 var = r4
-        type is (real*8)
+        type is (real(kind=8))
                 CALL cjsonObject_scalar_value (cjson,rp,nmlname,varname,attribute=trim(single))
                 var = rp
         type is (logical)
@@ -899,14 +929,15 @@ use iso_c_binding
  integer                           :: ar_size     !> \param ar_size The size of the array variable
  integer                           :: array_loop  !> \param array_loop The ending point of the loop for the json array
  integer,pointer                   :: ip (:)      !> \param ip an integer array pointer
- real*4,pointer                    :: r4 (:)      !> \param r4 a real*4 array pointer
- real*8,pointer                    :: rp (:)      !> \param rp a real*8 array pointer
+ real(kind=4),pointer              :: r4 (:)      !> \param r4 a real*4 array pointer
+ real(kind=8),pointer              :: rp (:)      !> \param rp a real*8 array pointer
  logical,pointer                   :: lp (:)      !> \param lp a logical array pointer
  character (len=10)                :: theunits    !< \param theunits a string of the units if they exist
  character (len=:),allocatable     :: units
  integer                           :: u_flag      !< \param u_flag 1 if there are units, 0 if there are not
  real                              :: convert_flag!< \param convert_flag -1.0 if units are not convertable
  character*10                      :: mins,maxs
+ integer                           :: iflag       !> \param iflag Tells if something is true
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  units="units"
  u_flag= existval( cjson, trim(nmlname)//C_NULL_CHAR , trim(varname)//C_NULL_CHAR, &
@@ -989,13 +1020,13 @@ endif
           ip(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(varcheck)//C_NULL_CHAR,CC)
            if (u_flag == 1 .and. convert_flag > 0) then
-                 ip(ii)=convert_int (trim(theunits)//C_NULL_CHAR, ip(ii))
+!                 ip(ii)=convert_int (trim(theunits)//C_NULL_CHAR, ip(ii))
            endif
         endif
         CC = CC + 1
      enddo
 !
-   type is (real*4)
+   type is (real(kind=4))
      r4(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = begin , array_loop
@@ -1003,12 +1034,12 @@ endif
           r4(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(varcheck)//C_NULL_CHAR,CC)
            if (u_flag == 1 .and. convert_flag > 0) then
-                 r4(ii)=convert_float (trim(theunits)//C_NULL_CHAR, r4(ii))
+!                 r4(ii)=convert_float (trim(theunits)//C_NULL_CHAR, r4(ii))
            endif
         endif
         CC = CC + 1
      enddo
-   type is (real*8)
+   type is (real(kind=8))
      rp(ilowB:) => var
      !> If scalar real, use C function real_jsonarray to get the value of var
      do ii = begin , array_loop
@@ -1016,7 +1047,7 @@ endif
           rp(ii) = real_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(varcheck)//C_NULL_CHAR,CC)
            if (u_flag == 1 .and. convert_flag > 0) then
-                 rp(ii)=convert_float (trim(theunits)//C_NULL_CHAR, rp(ii))
+!                 rp(ii)=convert_double (trim(theunits)//C_NULL_CHAR, rp(ii))
            endif
         endif
         CC = CC + 1
@@ -1027,8 +1058,13 @@ endif
      !> If scalar logical, use C function int_jsonarray to get the value of var
      do ii = begin , array_loop
         if (ii >= ilowB) then
-          lp(ii) = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
+          iflag = int_jsonarray (cjson,nmlname//C_NULL_CHAR,varname//C_NULL_CHAR,&
                              trim(varcheck)//C_NULL_CHAR,CC)
+          if (iflag == 0) then
+             lp(ii) = .false.
+          else
+             lp(ii) = .true.
+          endif
         endif
         CC = CC + 1
      enddo
@@ -1105,8 +1141,8 @@ use iso_c_binding
  integer                                :: isfillvalue !> \param isfillvalue 1 if there is a fillvalue, 
                                                        !! 0 if there isnt
  integer                                :: ip          !> \param ip a integer pointer
- real*4                                 :: r4          !> \param r4 a real*4 pointer
- real*8                                 :: rp          !> \param rp a real*8 pointer
+ real(kind=4)                           :: r4          !> \param r4 a real*4 pointer
+ real(kind=8)                           :: rp          !> \param rp a real*8 pointer
  logical                                :: lp          !> \param lp a logical pointer
  character(len=100)                     :: st_fill     !> \param lp a string to hold the fillvalue
  character(len=:),allocatable           :: val
@@ -1122,10 +1158,10 @@ use iso_c_binding
         type is (integer)
                 CALL cjsonObject_scalar_value (cjson,ip,nmlname,varname,attribute=fillvalue)
                 var = ip
-        type is (real*4)
+        type is (real(kind=4))
                 CALL cjsonObject_scalar_value (cjson,r4,nmlname,varname,attribute=fillvalue)
                 var = r4
-        type is (real*8)
+        type is (real(kind=8))
                 CALL cjsonObject_scalar_value (cjson,rp,nmlname,varname,attribute=fillvalue)
                 var = rp
         type is (logical)
@@ -1212,7 +1248,7 @@ subroutine areUnitsConvert (theunits,nmlname,varname,rp)
  character(*),intent(IN)        :: varname      !< The name of the variable of interest
  real,intent(OUT)               :: rp           !> \param rp The flag to see if the units are convertable
  rp=100.0
-                 rp = convert_check (trim(theunits)//C_NULL_CHAR, rp)
+!                 rp = convert_check (trim(theunits)//C_NULL_CHAR, rp)
      if (rp == -1.0) then  
  CALL cjson_error_mesg('cjson_object_mod', "The units "//trim(theunits)//" in the json object "//nmlname//&
  "{"//varname//"}"//" is not a convertable unit." ,NOTE)
