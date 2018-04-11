@@ -41,7 +41,7 @@
  !>Complete outstanding send or receive requests.
   subroutine mpp_sync_self(pelist,check,request,msg_size,msg_type)
     use iso_c_binding, only: c_int32_t,c_int,c_size_t
-!   use mpi
+    use mpi
 
    !<Inputs/Outputs
     integer(INT_KIND),dimension(:),intent(in),optional    :: pelist
@@ -115,16 +115,16 @@
                 tmp_msg_type(i) = msg_type(i)
             elseif (msg_type(i) .eq. MPP_CHAR) then
                 tmp_msg_type(i) = msg_type(i)
-!           elseif (msg_type(i) .eq. MPI_INTEGER4) then
-!               tmp_msg_type(i) = MPP_INT32
-!           elseif (msg_type(i) .eq. MPI_INTEGER8) then
-!               tmp_msg_type(i) = MPP_INT64
-!           elseif (msg_type(i) .eq. MPI_REAL4) then
-!               tmp_msg_type(i) = MPP_REAL32
-!           elseif (msg_type(i) .eq. MPI_REAL8) then
-!               tmp_msg_type(i) = MPP_REAL64
-!           elseif (msg_type(i) .eq. MPI_CHARACTER) then
-!               tmp_msg_type(i) = MPP_CHAR
+            elseif (msg_type(i) .eq. MPI_INTEGER4) then
+                tmp_msg_type(i) = MPP_INT32
+            elseif (msg_type(i) .eq. MPI_INTEGER8) then
+                tmp_msg_type(i) = MPP_INT64
+            elseif (msg_type(i) .eq. MPI_REAL4) then
+                tmp_msg_type(i) = MPP_REAL32
+            elseif (msg_type(i) .eq. MPI_REAL8) then
+                tmp_msg_type(i) = MPP_REAL64
+            elseif (msg_type(i) .eq. MPI_CHARACTER) then
+                tmp_msg_type(i) = MPP_CHAR
             else
                 call mpp_error(FATAL,'MPP_SYNC_SELF: unsupported msg type.')
             endif
