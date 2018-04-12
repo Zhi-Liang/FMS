@@ -7292,10 +7292,11 @@ subroutine mpp_define_null_domain2D(domainObj)
 type(domain2D), intent(inout) :: domainObj
 type(domain2d_private), pointer :: domain=>NULL()
 
-cur_domain_index = cur_domain_index+1
-domainObj%index = cur_domain_index
+domainObj%index = DOMAIN2D_INDEX_START
 call check_domain2d_index(domainObj, "mpp_define_null_domain2D")
 domain => domainList(domainObj%index)
+
+if(ASSOCIATED(domain%x)) return
 
 allocate(domain%x(1), domain%y(1), domain%tile_id(1))
 call mpp_define_null_domain(domain%x(1))

@@ -251,10 +251,10 @@ module mpp_domains_mod
   integer, parameter :: NAME_LENGTH = 64
   integer, parameter :: MAXLIST = 100
   integer, parameter :: MAXOVERLAP = 200
-  integer, parameter :: DOMAIN2D_INDEX_START = 1
+  integer, parameter :: DOMAIN2D_INDEX_START = 0
   integer, parameter :: DOMAIN2D_INDEX_END = 200
-  integer, parameter :: DOMAINUG_INDEX_START = 1001
-  integer, parameter :: DOMAINUG_INDEX_END = 1200
+  integer, parameter :: DOMAINUG_INDEX_START = 0
+  integer, parameter :: DOMAINUG_INDEX_END = 200
   integer, parameter :: FIELD_S = 0
   integer, parameter :: FIELD_X = 1
   integer, parameter :: FIELD_Y = 2
@@ -378,7 +378,7 @@ module mpp_domains_mod
      integer                     :: io_domain_index=0       ! index in domainList
   end type domain2D_private     
 
-  integer            :: cur_domain_index = DOMAIN2D_INDEX_START-1
+  integer            :: cur_domain_index = DOMAIN2D_INDEX_START
   type(domain2D_private), target :: domainList(DOMAIN2D_INDEX_START:DOMAIN2D_INDEX_END)
 
   type unstruct_axis_spec
@@ -434,7 +434,7 @@ module mpp_domains_mod
      integer(INT_KIND) :: io_layout
   end type domainUG_private
 
-  integer                :: cur_domainUG_index = DOMAINUG_INDEX_START-1
+  integer                :: cur_domainUG_index = DOMAINUG_INDEX_START
   type(domainUG_private), target :: domainUGList(DOMAINUG_INDEX_START:DOMAINUG_INDEX_END)
 
   !--- the following type is used to reprsent the contact between tiles.

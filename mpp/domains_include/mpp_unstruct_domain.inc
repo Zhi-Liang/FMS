@@ -599,11 +599,10 @@ return
      type(domainUG), intent(inout) :: domainObj
      type(domainUG_private), pointer :: domain=>NULL();
 
-     cur_domainUG_index = cur_domainUG_index+1
-     domainObj%index = cur_domainUG_index
+     domainObj%index = DOMAINUG_INDEX_START
      call check_domainUG_index(domainObj, "mpp_define_null_UG_domain")
      domain => domainUGList(domainObj%index)
-
+  
      domain%global%begin  = -1; domain%global%end  = -1; domain%global%size = 0
      domain%compute%begin = -1; domain%compute%end = -1; domain%compute%size = 0
      domain%pe = NULL_PE
@@ -951,7 +950,7 @@ subroutine do_pass_UG_to_SG_r8(UG_domain, field_UG, field_SG, ioff, joff)
 end subroutine do_pass_UG_to_SG_r8
 
 function mpp_domainUG_is_defined(domain)
-   type(domain2d), intent(in) :: domain
+   type(domainUG), intent(in) :: domain
    logical                    :: mpp_domainUG_is_defined
 
    mpp_domainUG_is_defined = domain%index > 0

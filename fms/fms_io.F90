@@ -120,6 +120,7 @@ use mpp_domains_mod, only: mpp_get_domain_shift, mpp_get_global_domain, mpp_glob
 use mpp_domains_mod, only: mpp_get_ntile_count, mpp_get_current_ntile, mpp_get_tile_id
 use mpp_domains_mod, only: mpp_get_pelist, mpp_get_io_domain, mpp_get_domain_npes
 use mpp_domains_mod, only: domainUG, mpp_pass_SG_to_UG, mpp_get_UG_domain_ntiles, mpp_get_UG_domain_tile_id
+use mpp_domains_mod, only: mpp_domainUG_is_defined, mpp_domain_is_defined
 use mpp_mod,         only: mpp_error, FATAL, NOTE, WARNING, mpp_pe, mpp_root_pe, mpp_npes, stdlog, stdout
 use mpp_mod,         only: mpp_broadcast, ALL_PES, mpp_chksum, mpp_get_current_pelist, mpp_npes, lowercase
 use mpp_mod,         only: input_nml_file, mpp_get_current_pelist_name, uppercase
@@ -201,11 +202,11 @@ type ax_type
    integer,allocatable :: idx(:)         !compressed io-domain index vector
    integer,allocatable :: nelems(:)      !num elements for each rank in io domain
    real, pointer      :: data(:) =>NULL()    !real axis values (not used if time axis)
-   type(domain2d),pointer :: domain =>NULL() ! domain associated with compressed axis
+   type(domain2d)     :: domain              ! domain associated with compressed axis
 
 !----------
 !ug support
-   type(domainUG),pointer :: domain_ug => null()     !<A pointer to an unstructured mpp domain.
+   type(domainUG) :: domain_ug                       !< an unstructured mpp domain.
    integer(INT_KIND)      :: nelems_for_current_rank !<The number of grid points registered to the current rank (used for error checking).
 !----------
 
@@ -241,7 +242,7 @@ type var_type
 
 !----------
 !ug support
-    type(domainUG),pointer            :: domain_ug => null()   !<A pointer to an unstructured mpp domain.
+    type(domainUG)                    :: domain_ug             !<an unstructured mpp domain.
     integer(INT_KIND),dimension(5)    :: field_dimension_order !<Array telling the ordering of the dimensions for the field.
     integer(INT_KIND),dimension(NIDX) :: field_dimension_sizes !<Array of sizes of the dimensions for the field.
 !----------
@@ -489,7 +490,7 @@ logical           :: great_circle_algorithm=.FALSE.
 
 !------ private data, pointer to current 2d domain ------
 ! entrained from fms_mod.  This will be deprecated in the future.
-type(domain2D), pointer, private :: Current_domain =>NULL()
+type(domain2D), private :: Current_domain
 
 integer, private :: is,ie,js,je      ! compute domain
 integer, private :: isd,ied,jsd,jed  ! data domain
@@ -497,8 +498,8 @@ integer, private :: isg,ieg,jsg,jeg  ! global domain
 character(len=128),      dimension(:), allocatable         :: registered_file ! file names registered through register_restart_file
 type(restart_file_type), dimension(:), allocatable         :: files_read  ! store files that are read through read_data
 type(restart_file_type), dimension(:), allocatable, target :: files_write ! store files that are written through write_data
-type(domain2d), dimension(max_domains), target, save  :: array_domain
-type(domain1d), dimension(max_domains), save       :: domain_x, domain_y
+type(domain2d), dimension(max_domains), save  :: array_domain
+type(domain1d), dimension(max_domains), save  :: domain_x, domain_y
 public  :: read_data, read_compressed, write_data, read_distributed
 public  :: fms_io_init, fms_io_exit, field_size, get_field_size
 public  :: open_namelist_file, open_restart_file, open_ieee32_file, close_file
@@ -693,7 +694,7 @@ subroutine fms_io_init()
   enddo
 
   !---- initialize module domain2d pointer ----
-  nullify (Current_domain)
+  Current_domain = NULL_DOMAIN2D
 
   !This is set here instead of at the end of the routine to prevent the read_data call below from stopping the model
   module_is_initialized = .TRUE.
@@ -762,7 +763,7 @@ subroutine fms_io_exit()
     character(len=10)                   :: axisname
     logical                             :: domain_present
     logical                             :: write_on_this_pe
-    type(domain2d), pointer :: io_domain =>NULL()
+    type(domain2d) :: io_domain
 
     if( .NOT.module_is_initialized )return !make sure it's only called once per PE
 
@@ -802,8 +803,8 @@ subroutine fms_io_exit()
 
        write_on_this_pe = .false.
        if(domain_present) then
-          io_domain => mpp_get_io_domain(array_domain(files_write(i)%var(j)%domain_idx))
-          if(associated(io_domain)) then
+          io_domain = mpp_get_io_domain(array_domain(files_write(i)%var(j)%domain_idx))
+          if(mpp_domain_is_defined(io_domain)) then
              if(mpp_domain_is_tile_root_pe(io_domain)) write_on_this_pe = .true.
           endif
        endif
@@ -1009,7 +1010,7 @@ subroutine write_data_3d_new(filename, fieldname, data, domain, no_domain, scala
 
   character(len=*),         intent(in)         :: filename, fieldname
   real, dimension(:,:,:),   intent(in)         :: data
-  type(domain2d), optional, intent(in), target :: domain
+  type(domain2d), optional, intent(in)         :: domain
   real,           optional, intent(in)         :: data_default
   logical,        optional, intent(in)         :: no_domain
   logical,        optional, intent(in)         :: scalar_or_1d
@@ -1027,7 +1028,7 @@ subroutine write_data_3d_new(filename, fieldname, data, domain, no_domain, scala
   integer                         :: gxsize, gysize
   integer                         :: cxsize, cysize
   integer                         :: dxsize, dysize
-  type(domain2d), pointer, save   :: d_ptr   =>NULL()
+  type(domain2d)                  :: d_ptr
   type(var_type), pointer, save   :: cur_var =>NULL()
   type(restart_file_type), pointer, save :: cur_file =>NULL()
 
@@ -1056,9 +1057,9 @@ subroutine write_data_3d_new(filename, fieldname, data, domain, no_domain, scala
      if(PRESENT(domain)) &
        call mpp_error(FATAL, 'fms_io(write_data_3d_new): no_domain cannot be .true. when optional argument domain is present.')
   else if(PRESENT(domain))then
-     d_ptr => domain
-  else if (ASSOCIATED(Current_domain)) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  else if (mpp_domain_is_defined(Current_domain)) then
+     d_ptr = Current_domain
   endif
 
   !--- remove .nc from file name
@@ -1107,7 +1108,7 @@ subroutine write_data_3d_new(filename, fieldname, data, domain, no_domain, scala
      cur_file%name = trim(fname)
      cur_file%tile_count=1
      if(present(tile_count)) cur_file%tile_count = tile_count
-     if(ASSOCIATED(d_ptr))then
+     if(mpp_domain_is_defined(d_ptr))then
         cur_file%is_root_pe = mpp_domain_is_tile_root_pe(d_ptr)
      else
         cur_file%is_root_pe = mpp_pe() == mpp_root_pe()
@@ -1165,7 +1166,7 @@ subroutine write_data_3d_new(filename, fieldname, data, domain, no_domain, scala
      cur_var%ndim = 3
      if(present(position)) cur_var%position = position
 
-     if(ASSOCIATED(d_ptr) .AND. .NOT. is_scalar_or_1d)then
+     if(mpp_domain_is_defined(d_ptr) .AND. .NOT. is_scalar_or_1d)then
         cur_var%domain_present = .true.
         domain_idx = lookup_domain(d_ptr)
         if(domain_idx == -1) then
@@ -1219,7 +1220,6 @@ subroutine write_data_3d_new(filename, fieldname, data, domain, no_domain, scala
 
   cur_var%buffer(:,:,:,cur_var%siz(4)) = data ! copy current data to buffer for future write out
 
-  d_ptr =>NULL()
   cur_var =>NULL()
   cur_file =>NULL()
 
@@ -1306,7 +1306,7 @@ subroutine register_restart_axis_i1d(fileObj,filename,fieldname,data,compressed,
   integer :: ssize,rsize,npes
   integer :: idx
   integer, allocatable :: pelist(:)
-  type(domain2d), pointer :: io_domain=>NULL()
+  type(domain2d) :: io_domain
 
 
   if(.not.module_is_initialized) call mpp_error(FATAL,'fms_io(register_restart_axis_i1d): need to call fms_io_init')
@@ -1332,10 +1332,10 @@ subroutine register_restart_axis_i1d(fileObj,filename,fieldname,data,compressed,
   fileObj%is_compressed = .true.
   fileObj%unlimited_axis = .false.
   fileObj%axes(idx)%name = fieldname
-  if(ASSOCIATED(current_domain)) then
-     fileObj%axes(idx)%domain =>current_domain
-     io_domain =>mpp_get_io_domain(current_domain)
-     if(.not. ASSOCIATED(io_domain)) &
+  if(mpp_domain_is_defined(current_domain)) then
+     fileObj%axes(idx)%domain = current_domain
+     io_domain = mpp_get_io_domain(current_domain)
+     if(.not. mpp_domain_is_defined(io_domain)) &
                  call mpp_error(FATAL,'fms_io(register_restart_axis_i1d): The io domain must be defined')
      npes = mpp_get_domain_npes(io_domain)
      allocate(fileObj%axes(idx)%nelems(npes)); fileObj%axes(idx)%nelems = 0
@@ -1347,7 +1347,7 @@ subroutine register_restart_axis_i1d(fileObj,filename,fieldname,data,compressed,
      allocate( fileObj%axes(idx)%idx(rsize) )
   !  Note that the gatherV implied here is asymmetric; only root needs to know the vector of recv sizes
      call mpp_gather(data,ssize,fileObj%axes(idx)%idx,fileObj%axes(idx)%nelems,pelist)
-     deallocate(pelist); io_domain=>NULL()
+     deallocate(pelist)
   else
      call mpp_error(FATAL,'fms_io(register_restart_axis_i1d): The domain must be defined through set_domain')
   endif
@@ -1370,7 +1370,7 @@ subroutine register_restart_axis_unlimited(fileObj,filename,fieldname,nelem,unit
 
   integer :: idx,npes
   integer, allocatable :: pelist(:)
-  type(domain2d), pointer :: io_domain=>NULL()
+  type(domain2d) :: io_domain
 
 
   if(.not.module_is_initialized) &
@@ -1387,17 +1387,17 @@ subroutine register_restart_axis_unlimited(fileObj,filename,fieldname,nelem,unit
   fileObj%is_compressed = .false.
   fileObj%unlimited_axis = .true.
   fileObj%axes(idx)%name = fieldname
-  if(ASSOCIATED(current_domain)) then
-     fileObj%axes(idx)%domain =>current_domain
-     io_domain =>mpp_get_io_domain(current_domain)
-     if(.not. ASSOCIATED(io_domain)) &
+  if(mpp_domain_is_defined(current_domain)) then
+     fileObj%axes(idx)%domain = current_domain
+     io_domain = mpp_get_io_domain(current_domain)
+     if(.not. mpp_domain_is_defined(io_domain)) &
                  call mpp_error(FATAL,'fms_io(register_restart_axis_i1d): The io domain must be defined')
      npes = mpp_get_domain_npes(io_domain)
      allocate(fileObj%axes(idx)%nelems(npes)); fileObj%axes(idx)%nelems = 0
      allocate(pelist(npes))
      call mpp_get_pelist(io_domain,pelist)
      call mpp_gather((/nelem/),fileObj%axes(idx)%nelems,pelist)
-     deallocate(pelist); io_domain=>NULL()
+     deallocate(pelist)
   else
      call mpp_error(FATAL,'fms_io(register_restart_axis_unlimited): The domain must be defined through set_domain')
   endif
@@ -1568,7 +1568,7 @@ function register_restart_field_r0d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type),    intent(inout)      :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real,                       intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   logical,          optional, intent(in)         :: no_domain
   real,             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: mandatory
@@ -1601,7 +1601,7 @@ function register_restart_field_r1d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real, dimension(:),         intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   logical,          optional, intent(in)         :: no_domain
   real,             optional, intent(in)         :: data_default
   integer,          optional, intent(in)         :: position, tile_count
@@ -1635,7 +1635,7 @@ function register_restart_field_r2d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real,     dimension(:,:),   intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real,             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   logical,          optional, intent(in)         :: compressed
@@ -1673,7 +1673,7 @@ function register_restart_field_r3d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real,     dimension(:,:,:), intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real,             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
@@ -1715,7 +1715,7 @@ function register_restart_field_r2d8(fileObj, filename, fieldname, data, domain,
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real(DOUBLE_KIND),     dimension(:,:),   intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real(DOUBLE_KIND),             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   logical,          optional, intent(in)         :: compressed
@@ -1755,7 +1755,7 @@ function register_restart_field_r3d8(fileObj, filename, fieldname, data, domain,
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real(DOUBLE_KIND),     dimension(:,:,:), intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real(DOUBLE_KIND),             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
@@ -1794,7 +1794,7 @@ function register_restart_field_r4d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type),   intent(inout)         :: fileObj
   character(len=*),             intent(in)         :: filename, fieldname
   real,     dimension(:,:,:,:), intent(in), target :: data
-  type(domain2d),   optional,   intent(in), target :: domain
+  type(domain2d),   optional,   intent(in)         :: domain
   real,             optional,   intent(in)         :: data_default
   logical,          optional,   intent(in)         :: no_domain
   integer,          optional,   intent(in)         :: position, tile_count
@@ -1828,7 +1828,7 @@ function register_restart_field_i0d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   integer,                    intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   integer,             optional, intent(in)      :: data_default
   integer,          optional, intent(in)         :: position, tile_count
   logical,          optional, intent(in)         :: mandatory
@@ -1868,7 +1868,7 @@ function register_restart_field_i1d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   integer, dimension(:),      intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   integer,          optional, intent(in)         :: data_default
   integer,          optional, intent(in)         :: position, tile_count
   logical,          optional, intent(in)         :: mandatory
@@ -1908,7 +1908,7 @@ function register_restart_field_i2d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   integer,  dimension(:,:),   intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   integer,          optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   logical,          optional, intent(in)         :: compressed
@@ -1951,8 +1951,8 @@ function register_restart_field_i3d(fileObj, filename, fieldname, data, domain, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   integer,  dimension(:,:,:), intent(in), target :: data
-  type(domain2d),   optional, intent(in), target :: domain
-  integer,             optional, intent(in)         :: data_default
+  type(domain2d),   optional, intent(in)         :: domain
+  integer,             optional, intent(in)      :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
   logical,          optional, intent(in)         :: mandatory
@@ -1989,7 +1989,7 @@ function register_restart_field_r0d_2level(fileObj, filename, fieldname, data1, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real,                       intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real,             optional, intent(in)         :: data_default
   integer,          optional, intent(in)         :: position, tile_count
   logical,          optional, intent(in)         :: mandatory
@@ -2021,7 +2021,7 @@ function register_restart_field_r1d_2level(fileObj, filename, fieldname, data1, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real,     dimension(:),     intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real,             optional, intent(in)         :: data_default
   integer,          optional, intent(in)         :: position, tile_count
   logical,          optional, intent(in)         :: mandatory
@@ -2055,7 +2055,7 @@ function register_restart_field_r2d_2level(fileObj, filename, fieldname, data1, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real,     dimension(:,:),   intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real,             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
@@ -2089,7 +2089,7 @@ function register_restart_field_r3d_2level(fileObj, filename, fieldname, data1, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real,     dimension(:,:,:), intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real,             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
@@ -2124,7 +2124,7 @@ function register_restart_field_r2d8_2level(fileObj, filename, fieldname, data1,
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real(DOUBLE_KIND),     dimension(:,:),   intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real,             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
@@ -2158,7 +2158,7 @@ function register_restart_field_r3d8_2level(fileObj, filename, fieldname, data1,
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   real(DOUBLE_KIND),     dimension(:,:,:), intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   real,             optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
@@ -2193,7 +2193,7 @@ function register_restart_field_i0d_2level(fileObj, filename, fieldname, data1, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   integer,                    intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   integer,          optional, intent(in)         :: data_default
   integer,          optional, intent(in)         :: position, tile_count
   logical,          optional, intent(in)         :: mandatory
@@ -2234,7 +2234,7 @@ function register_restart_field_i1d_2level(fileObj, filename, fieldname, data1, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   integer,  dimension(:),     intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   integer,          optional, intent(in)         :: data_default
   integer,          optional, intent(in)         :: position, tile_count
   logical,          optional, intent(in)         :: mandatory
@@ -2275,7 +2275,7 @@ function register_restart_field_i2d_2level(fileObj, filename, fieldname, data1, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   integer,  dimension(:,:),   intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   integer,          optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
@@ -2316,7 +2316,7 @@ function register_restart_field_i3d_2level(fileObj, filename, fieldname, data1, 
   type(restart_file_type), intent(inout)         :: fileObj
   character(len=*),           intent(in)         :: filename, fieldname
   integer,  dimension(:,:,:), intent(in), target :: data1, data2
-  type(domain2d),   optional, intent(in), target :: domain
+  type(domain2d),   optional, intent(in)         :: domain
   integer,          optional, intent(in)         :: data_default
   logical,          optional, intent(in)         :: no_domain
   integer,          optional, intent(in)         :: position, tile_count
@@ -2580,7 +2580,7 @@ subroutine save_compressed_restart(fileObj,restartpath,append,time_level)
   character(len=256)                  :: checksum_char
   logical                             :: domain_present, write_meta_data, write_field_data
   logical                             :: c_axis_defined, h_axis_defined, CC_axis_defined
-  type(domain2d), pointer :: domain =>NULL()
+  type(domain2d)          :: domain
   type(ax_type),  pointer :: axis   =>NULL()
 
   !-- no need to proceed if all the variables are read only.
@@ -2590,9 +2590,9 @@ subroutine save_compressed_restart(fileObj,restartpath,append,time_level)
      call mpp_error(FATAL, "fms_io(save_compressed_restart): A compressed axis has "// &
           "not been defined for file "//trim(fileObj%name))
   else if (ALLOCATED(fileObj%axes(CIDX)%idx)) then
-     domain =>fileObj%axes(CIDX)%domain
+     domain = fileObj%axes(CIDX)%domain
   else
-     domain =>fileObj%axes(HIDX)%domain
+     domain = fileObj%axes(HIDX)%domain
   endif
 
   if(present(append)) then
@@ -2880,7 +2880,7 @@ subroutine save_unlimited_axis_restart(fileObj,restartpath)
   real, allocatable, dimension(:)     :: r1d
   integer(LONG_KIND)                  :: check_val
   character(len=256)                  :: checksum_char
-  type(domain2d), pointer :: domain =>NULL()
+  type(domain2d)          :: domain
   type(ax_type),  pointer :: axis   =>NULL()
 
 
@@ -2888,7 +2888,7 @@ subroutine save_unlimited_axis_restart(fileObj,restartpath)
      call mpp_error(FATAL, "fms_io(save_unlimited_axis_restart): An unlimited axis has "// &
           "not been defined for file "//trim(fileObj%name))
   endif
-  domain =>fileObj%axes(UIDX)%domain
+  domain = fileObj%axes(UIDX)%domain
 
   call mpp_open(unit,trim(restartpath),action=MPP_OVERWR,form=form, &
                 is_root_pe=fileObj%is_root_pe, domain=domain)
@@ -2992,7 +2992,7 @@ subroutine save_default_restart(fileObj,restartpath)
   integer :: isg, ieg, jsg, jeg
   integer :: ishift, jshift, iadd, jadd, cpack_size
   logical :: write_on_this_pe
-  type(domain2d), pointer :: io_domain =>NULL()
+  type(domain2d) :: io_domain
 
   if (.not.associated(fileObj%var)) call mpp_error(FATAL, "fms_io(save_restart): " // &
       "restart_file_type data must be initialized by calling register_restart_field before using it")
@@ -3020,8 +3020,8 @@ subroutine save_default_restart(fileObj,restartpath)
 
   write_on_this_pe = .false.
   if(domain_present) then
-     io_domain => mpp_get_io_domain(array_domain(fileObj%var(ind_dom)%domain_idx))
-     if(associated(io_domain)) then
+     io_domain = mpp_get_io_domain(array_domain(fileObj%var(ind_dom)%domain_idx))
+     if(mpp_domain_is_defined(io_domain)) then
        if(mpp_domain_is_tile_root_pe(io_domain)) write_on_this_pe = .true.
      endif
   endif
@@ -3185,7 +3185,7 @@ subroutine save_default_restart(fileObj,restartpath)
        call mpp_get_compute_domain(array_domain(cur_var%domain_idx), isc, iec, jsc, jec)
        call mpp_get_global_domain(array_domain(cur_var%domain_idx), isg, ieg, jsg, jeg)
        call mpp_get_domain_shift(array_domain(cur_var%domain_idx), ishift, jshift, cur_var%position)
-     else if (ASSOCIATED(Current_domain)) then
+     else if (mpp_domain_is_defined(Current_domain)) then
        call mpp_get_compute_domain(Current_domain, isc, iec, jsc, jec)
        call mpp_get_global_domain(Current_domain, isg, ieg, jsg, jeg)
        call mpp_get_domain_shift(Current_domain, ishift, jshift, cur_var%position)
@@ -3826,7 +3826,7 @@ subroutine write_chksum(fileObj, action)
         call mpp_get_compute_domain(array_domain(cur_var%domain_idx), isc, iec, jsc, jec)
         call mpp_get_global_domain(array_domain(cur_var%domain_idx), isg, ieg, jsg, jeg)
         call mpp_get_domain_shift(array_domain(cur_var%domain_idx), ishift, jshift, cur_var%position)
-     else if (ASSOCIATED(Current_domain)) then
+     else if (mpp_domain_is_defined(Current_domain)) then
         call mpp_get_compute_domain(Current_domain, isc, iec, jsc, jec)
         call mpp_get_global_domain(Current_domain, isg, ieg, jsg, jeg)
         call mpp_get_domain_shift(Current_domain, ishift, jshift, cur_var%position)
@@ -3920,7 +3920,7 @@ subroutine restore_state_all(fileObj, directory, nonfatal_missing_files)
   real, allocatable, dimension(:,:)   :: r2d
   real, allocatable, dimension(:)     :: r1d
   real                                :: r0d
-  type(domain2d), pointer, save       :: io_domain=>NULL()
+  type(domain2d)                      :: io_domain
   integer                             :: isc, iec, jsc, jec
   logical                             :: check_exist
   integer                             :: isg, ieg, jsg, jeg
@@ -3960,8 +3960,8 @@ subroutine restore_state_all(fileObj, directory, nonfatal_missing_files)
   !--- NOTE: For distributed restart file, we are assuming there is only one file exist.
   fexist = .FALSE.
   if(domain_present) then
-     io_domain => mpp_get_io_domain(array_domain(domain_idx))
-     if(associated(io_domain)) then
+     io_domain = mpp_get_io_domain(array_domain(domain_idx))
+     if(mpp_domain_is_defined(io_domain)) then
         tile_id = mpp_get_tile_id(io_domain)
         write(filename, '(a,i4.4)' ) trim(restartpath)//'.', tile_id(1)
         inquire (file=trim(filename), exist = fexist)
@@ -3970,7 +3970,6 @@ subroutine restore_state_all(fileObj, directory, nonfatal_missing_files)
            inquire (file=trim(filename), exist = fexist)
         endif
      endif
-     io_domain => NULL()
   endif
   if(fexist) then
      nfile = 1
@@ -4035,7 +4034,7 @@ subroutine restore_state_all(fileObj, directory, nonfatal_missing_files)
           call mpp_get_compute_domain(array_domain(cur_var%domain_idx), isc, iec, jsc, jec)
           call mpp_get_global_domain(array_domain(cur_var%domain_idx), isg, ieg, jsg, jeg)
           call mpp_get_domain_shift(array_domain(cur_var%domain_idx), ishift, jshift, cur_var%position)
-        else if (ASSOCIATED(Current_domain)) then
+        else if (mpp_domain_is_defined(Current_domain)) then
           call mpp_get_compute_domain(Current_domain, isc, iec, jsc, jec)
           call mpp_get_global_domain(Current_domain, isg, ieg, jsg, jeg)
           call mpp_get_domain_shift(Current_domain, ishift, jshift, cur_var%position)
@@ -4257,7 +4256,7 @@ subroutine restore_state_one_field(fileObj, id_field, directory, nonfatal_missin
   real, allocatable, dimension(:,:)   :: r2d
   real, allocatable, dimension(:)     :: r1d
   real                                :: r0d
-  type(domain2d), pointer, save       :: io_domain=>NULL()
+  type(domain2d)                      :: io_domain
   integer                             :: isc, iec, jsc, jec
   logical                             :: check_exist
   integer                             :: isg, ieg, jsg, jeg
@@ -4284,7 +4283,7 @@ subroutine restore_state_one_field(fileObj, id_field, directory, nonfatal_missin
      call mpp_get_compute_domain(array_domain(cur_var%domain_idx), isc, iec, jsc, jec)
      call mpp_get_global_domain(array_domain(cur_var%domain_idx), isg, ieg, jsg, jeg)
      call mpp_get_domain_shift(array_domain(cur_var%domain_idx), ishift, jshift, cur_var%position)
-  else if (ASSOCIATED(Current_domain)) then
+  else if (mpp_domain_is_defined(Current_domain)) then
      call mpp_get_compute_domain(Current_domain, isc, iec, jsc, jec)
      call mpp_get_global_domain(Current_domain, isg, ieg, jsg, jeg)
      call mpp_get_domain_shift(Current_domain, ishift, jshift, cur_var%position)
@@ -4314,8 +4313,8 @@ subroutine restore_state_one_field(fileObj, id_field, directory, nonfatal_missin
   !--- NOTE: For distributed restart file, we are assuming there is only one file exist.
   fexist = .FALSE.
   if(domain_present) then
-     io_domain => mpp_get_io_domain(array_domain(domain_idx))
-     if(associated(io_domain)) then
+     io_domain = mpp_get_io_domain(array_domain(domain_idx))
+     if(mpp_domain_is_defined(io_domain)) then
         tile_id = mpp_get_tile_id(io_domain)
         write(filename, '(a,i4.4)' ) trim(restartpath)//'.', tile_id(1)
         inquire (file=trim(filename), exist = fexist)
@@ -4324,7 +4323,6 @@ subroutine restore_state_one_field(fileObj, id_field, directory, nonfatal_missin
            inquire (file=trim(filename), exist = fexist)
         endif
      endif
-     io_domain=>NULL()
   endif
 
   if(fexist) then
@@ -4539,7 +4537,7 @@ subroutine setup_one_field(fileObj, filename, fieldname, field_siz, index_field,
   character(len=*),         intent(in)           :: filename, fieldname
   integer, dimension(:),    intent(in)           :: field_siz
   integer,                  intent(out)          :: index_field
-  type(domain2d), optional, intent(in), target   :: domain
+  type(domain2d), optional, intent(in)           :: domain
   real,           optional, intent(in)           :: data_default
   logical,        optional, intent(in)           :: no_domain
   logical,        optional, intent(in)           :: scalar_or_1d
@@ -4559,7 +4557,7 @@ subroutine setup_one_field(fileObj, filename, fieldname, field_siz, index_field,
   logical                         :: is_no_domain = .false.
   logical                         :: is_scalar_or_1d = .false.
   character(len=256)              :: fname, filename2, append_string
-  type(domain2d), pointer, save   :: d_ptr   =>NULL()
+  type(domain2d)                  :: d_ptr
   type(var_type), pointer, save   :: cur_var =>NULL()
   integer                         :: length, n_field_siz
 
@@ -4588,9 +4586,9 @@ subroutine setup_one_field(fileObj, filename, fieldname, field_siz, index_field,
      if(PRESENT(domain)) &
        call mpp_error(FATAL, 'fms_io(setup_one_field): no_domain cannot be .true. when optional argument domain is present.')
   else if(PRESENT(domain))then
-     d_ptr => domain
-  else if (ASSOCIATED(Current_domain)) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  else if (mpp_domain_is_defined(Current_domain)) then
+     d_ptr = Current_domain
   endif
 
   !--- remove .nc from file name
@@ -4646,7 +4644,7 @@ subroutine setup_one_field(fileObj, filename, fieldname, field_siz, index_field,
      fileObj%name = trim(fname)
      fileObj%tile_count=1
      if(present(tile_count)) fileObj%tile_count = tile_count
-     if(ASSOCIATED(d_ptr))then
+     if(mpp_domain_is_defined(d_ptr))then
         fileObj%is_root_pe = mpp_domain_is_tile_root_pe(d_ptr)
      else
         fileObj%is_root_pe = mpp_pe() == mpp_root_pe()
@@ -4723,7 +4721,7 @@ subroutine setup_one_field(fileObj, filename, fieldname, field_siz, index_field,
      cur_var%is = 1; cur_var%ie =  cur_var%siz(1)
      cur_var%js = 1; cur_var%je =  cur_var%siz(2)
 
-     if(ASSOCIATED(d_ptr) .AND. .NOT. is_scalar_or_1d ) then
+     if(mpp_domain_is_defined(d_ptr) .AND. .NOT. is_scalar_or_1d ) then
         cur_var%domain_present = .true.
         domain_idx = lookup_domain(d_ptr)
         if(domain_idx == -1) then
@@ -4763,7 +4761,6 @@ subroutine setup_one_field(fileObj, filename, fieldname, field_siz, index_field,
      endif
   end if
 
-  d_ptr =>NULL()
   cur_var =>NULL()
 
 end subroutine setup_one_field
@@ -4942,7 +4939,7 @@ subroutine field_size(filename, fieldname, siz, field_found, domain, no_domain )
   character(len=*), intent(in)                 :: filename, fieldname
   integer,       intent(inout)                 :: siz(:)
   logical,       intent(out), optional         :: field_found
-  type(domain2d), intent(in), optional, target :: domain
+  type(domain2d), intent(in), optional         :: domain
   logical,       intent(in),  optional         :: no_domain
 
   integer                              :: nfile, unit
@@ -4993,7 +4990,7 @@ subroutine file_unit(filename, found_file, unit, domain, no_domain)
   character(len=*), intent(in)                 :: filename
   logical,          intent(out)                :: found_file
   integer,          intent(out)                :: unit
-  type(domain2d), intent(in), optional, target :: domain
+  type(domain2d), intent(in), optional         :: domain
   logical,       intent(in),  optional         :: no_domain
 
   integer                              :: nfile
@@ -5043,7 +5040,7 @@ end subroutine file_unit
 function dimension_size(filename, dimname, domain, no_domain )
 
   character(len=*), intent(in)                 :: filename, dimname
-  type(domain2d), intent(in), optional, target :: domain
+  type(domain2d), intent(in), optional         :: domain
   logical,       intent(in),  optional         :: no_domain
   integer                                      :: dimension_size
 
@@ -5113,26 +5110,26 @@ subroutine get_field_size(filename, fieldname, siz, field_found, domain, no_doma
   character(len=*), intent(in)                 :: filename, fieldname
   integer,       intent(inout)                 :: siz(:)
   logical,       intent(out), optional         :: field_found
-  type(domain2d), intent(in), optional, target :: domain
+  type(domain2d), intent(in), optional         :: domain
   logical,       intent(in),  optional         :: no_domain
 
   integer :: npes, p, unit
   integer, allocatable :: pelist(:)
   logical :: found, found_file
-  type(domain2d), pointer :: domain_in =>NULL()
-  type(domain2d), pointer :: io_domain =>NULL()
+  type(domain2d) :: domain_in
+  type(domain2d) :: io_domain
 
 
   if(PRESENT(domain)) then
-     domain_in =>domain
-  elseif(ASSOCIATED(current_domain)) then
-     domain_in =>current_domain
+     domain_in = domain
+  elseif(mpp_domain_is_defined(current_domain)) then
+     domain_in = current_domain
   else
      call mpp_error(FATAL,'fms_io(get_field_size): The domain must be defined')
   endif
 
-  io_domain =>mpp_get_io_domain(domain)
-  if(.not. ASSOCIATED(io_domain)) call mpp_error(FATAL,'fms_io(get_field_size): The io domain must be defined')
+  io_domain = mpp_get_io_domain(domain)
+  if(.not. mpp_domain_is_defined(io_domain)) call mpp_error(FATAL,'fms_io(get_field_size): The io domain must be defined')
 
   npes = mpp_get_domain_npes(io_domain)
   allocate(pelist(npes))
@@ -5325,7 +5322,7 @@ subroutine read_data_3d_new(filename,fieldname,data,domain,timelevel, &
                             no_domain, scalar_or_1d, position, tile_count)
   character(len=*),                  intent(in) :: filename, fieldname
   real, dimension(:,:,:),         intent(inout) :: data ! 3 dimensional data
-  type(domain2d), target, optional,  intent(in) :: domain
+  type(domain2d),         optional,  intent(in) :: domain
   integer,                optional,  intent(in) :: timelevel
   logical,                optional,  intent(in) :: no_domain
   logical,                optional,  intent(in) :: scalar_or_1d
@@ -5343,8 +5340,8 @@ subroutine read_data_3d_new(filename,fieldname,data,domain,timelevel, &
   logical                       :: is_scalar_or_1d = .false.
   logical                       :: is_no_domain = .false.
   logical                       :: read_dist, io_domain_exist, found_file
-  type(domain2d), pointer, save :: d_ptr =>NULL()
-  type(domain2d), pointer, save :: io_domain =>NULL()
+  type(domain2d) :: d_ptr
+  type(domain2d) :: io_domain
 
 
 ! read disttributed files is used when reading restart files that are NOT mppnccombined. In this
@@ -5360,15 +5357,15 @@ subroutine read_data_3d_new(filename,fieldname,data,domain,timelevel, &
   endif
 
   if(PRESENT(domain))then
-     d_ptr => domain
-  elseif (ASSOCIATED(Current_domain) .AND. .NOT. is_no_domain ) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  elseif (mpp_domain_is_defined(Current_domain) .AND. .NOT. is_no_domain ) then
+     d_ptr = Current_domain
   endif
 
   is_scalar_or_1d = .false.
   if(present(scalar_or_1d)) is_scalar_or_1d = scalar_or_1d
 
-  if(.not. PRESENT(domain) .and. .not. ASSOCIATED(Current_domain) ) is_no_domain = .true.
+  if(.not. PRESENT(domain) .and. .not. mpp_domain_is_defined(Current_domain) ) is_no_domain = .true.
 
   found_file = get_file_name(filename, fname, read_dist, io_domain_exist, is_no_domain, domain,  tile_count)
   if(.not.found_file) call mpp_error(FATAL, 'fms_io_mod(read_data_3d_new): file ' //trim(filename)// &
@@ -5376,14 +5373,13 @@ subroutine read_data_3d_new(filename,fieldname,data,domain,timelevel, &
   call get_file_unit(fname, unit, file_index, read_dist, io_domain_exist, domain=domain)
 
   siz_in(3) = size(data,3)
-  if(is_no_domain .or. .NOT. associated(d_ptr) .or. is_scalar_or_1d) then
+  if(is_no_domain .or. .NOT. mpp_domain_is_defined(d_ptr) .or. is_scalar_or_1d) then
      gxsize = size(data,1)
      gysize = size(data,2)
   else if(read_dist) then
      if(io_domain_exist) then
-        io_domain=>mpp_get_io_domain(d_ptr)
+        io_domain=mpp_get_io_domain(d_ptr)
         call mpp_get_global_domain(io_domain, xsize = gxsize, ysize = gysize, tile_count=tile_count, position=position)
-        io_domain=>NULL()
      else
         call mpp_get_compute_domain(d_ptr, xsize = gxsize, ysize = gysize, tile_count=tile_count, position=position)
      endif
@@ -5437,8 +5433,6 @@ subroutine read_data_3d_new(filename,fieldname,data,domain,timelevel, &
      call mpp_read(unit,files_read(file_index)%var(index_field)%field,d_ptr,data,tlev,tile_count)
   endif
 
-  d_ptr =>NULL()
-
   return
 end subroutine read_data_3d_new
 
@@ -5490,7 +5484,7 @@ end subroutine read_compressed_1d
 subroutine read_compressed_2d(filename,fieldname,data,domain,timelevel,start,nread,threading)
   character(len=*), intent(in)           :: filename, fieldname
   real, dimension(:,:), intent(inout)    :: data     !2 dimensional data
-  type(domain2d), target, optional, intent(in) :: domain
+  type(domain2d),   optional, intent(in) :: domain
   integer, intent(in) , optional         :: timelevel
   integer, intent(in) , optional         :: start(:), nread(:)
   integer, intent(in) , optional         :: threading
@@ -5500,16 +5494,16 @@ subroutine read_compressed_2d(filename,fieldname,data,domain,timelevel,start,nre
   integer                       :: file_index  ! index of the opened file in array files
   integer                       :: index_field ! position of the fieldname in the list of variables
   logical                       :: read_dist, io_domain_exist, found_file
-  type(domain2d), pointer, save :: d_ptr =>NULL()
-  type(domain2d), pointer, save :: io_domain =>NULL()
+  type(domain2d)                :: d_ptr
+  type(domain2d)                :: io_domain
 
 ! Initialize files to default values
   if(.not.module_is_initialized) call mpp_error(FATAL,'fms_io(read_compressed_2d):  module not initialized')
 
   if(PRESENT(domain))then
-     d_ptr => domain
-  elseif (ASSOCIATED(Current_domain)) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  elseif (mpp_domain_is_defined(Current_domain)) then
+     d_ptr = Current_domain
   else
      call mpp_error(FATAL,'fms_io(read_compressed_2d): Domain must be an argument or set by set_domain()')
   endif
@@ -5528,14 +5522,13 @@ subroutine read_compressed_2d(filename,fieldname,data,domain,timelevel,start,nre
   else
      call mpp_read_compressed(unit,files_read(file_index)%var(index_field)%field,d_ptr,data,timelevel,start,nread,threading)
   endif
-  d_ptr =>NULL()
 end subroutine read_compressed_2d
 
 !.....................................................................
 subroutine read_compressed_3d(filename,fieldname,data,domain,timelevel)
   character(len=*), intent(in)           :: filename, fieldname
   real, dimension(:,:,:), intent(inout)  :: data     !3 dimensional data
-  type(domain2d), target, optional, intent(in) :: domain
+  type(domain2d),   optional, intent(in) :: domain
   integer, intent(in) , optional         :: timelevel
 
   character(len=256)            :: fname
@@ -5543,16 +5536,16 @@ subroutine read_compressed_3d(filename,fieldname,data,domain,timelevel)
   integer                       :: file_index  ! index of the opened file in array files
   integer                       :: index_field ! position of the fieldname in the list of variables
   logical                       :: read_dist, io_domain_exist, found_file
-  type(domain2d), pointer, save :: d_ptr =>NULL()
-  type(domain2d), pointer, save :: io_domain =>NULL()
+  type(domain2d) :: d_ptr
+  type(domain2d) :: io_domain
 
 ! Initialize files to default values
   if(.not.module_is_initialized) call mpp_error(FATAL,'fms_io(read_compressed_3d):  module not initialized')
 
   if(PRESENT(domain))then
-     d_ptr => domain
-  elseif (ASSOCIATED(Current_domain)) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  elseif (mpp_domain_is_defined(Current_domain)) then
+     d_ptr = Current_domain
   else
      call mpp_error(FATAL,'fms_io(read_compressed_3d): Domain must be an argument or set by set_domain()')
   endif
@@ -5571,7 +5564,6 @@ subroutine read_compressed_3d(filename,fieldname,data,domain,timelevel)
   else
      call mpp_read_compressed(unit,files_read(file_index)%var(index_field)%field,d_ptr,data,timelevel)
   endif
-  d_ptr =>NULL()
 end subroutine read_compressed_3d
 
 !.....................................................................
@@ -5662,7 +5654,7 @@ subroutine read_data_2d_region(filename,fieldname,data,start,nread,domain, &
   character(len=*),                  intent(in) :: filename, fieldname
   real, dimension(:,:),           intent(inout) :: data ! 3 dimensional data
   integer, dimension(:),             intent(in) :: start, nread
-  type(domain2d), target,  optional, intent(in) :: domain
+  type(domain2d),          optional, intent(in) :: domain
   logical,                 optional, intent(in) :: no_domain
   integer,                 optional, intent(in) :: tile_count
   character(len=256)            :: fname
@@ -5671,7 +5663,7 @@ subroutine read_data_2d_region(filename,fieldname,data,start,nread,domain, &
   integer                       :: index_field ! position of the fieldname in the list of variables
   logical                       :: is_no_domain = .false.
   logical                       :: read_dist, io_domain_exist, found_file
-  type(domain2d), pointer, save :: d_ptr =>NULL()
+  type(domain2d)                :: d_ptr
 
 
 ! Initialize files to default values
@@ -5680,12 +5672,12 @@ subroutine read_data_2d_region(filename,fieldname,data,start,nread,domain, &
   if (PRESENT(no_domain)) is_no_domain = no_domain
 
   if(PRESENT(domain))then
-     d_ptr => domain
-  elseif (ASSOCIATED(Current_domain) .AND. .NOT. is_no_domain ) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  elseif (mpp_domain_is_defined(Current_domain) .AND. .NOT. is_no_domain ) then
+     d_ptr = Current_domain
   endif
 
-  if(.not. PRESENT(domain) .and. .not. ASSOCIATED(Current_domain) ) is_no_domain = .true.
+  if(.not. PRESENT(domain) .and. .not. mpp_domain_is_defined(Current_domain) ) is_no_domain = .true.
 
   found_file = get_file_name(filename, fname, read_dist, io_domain_exist, is_no_domain, domain,  tile_count)
   if(.not.found_file) call mpp_error(FATAL, 'fms_io_mod(read_data_2d_region): file ' //trim(filename)// &
@@ -5700,8 +5692,6 @@ subroutine read_data_2d_region(filename,fieldname,data,start,nread,domain, &
   endif
   call mpp_read(unit,files_read(file_index)%var(index_field)%field,data,start, nread)
 
-  d_ptr =>NULL()
-
   return
 end subroutine read_data_2d_region
 
@@ -5710,7 +5700,7 @@ subroutine read_data_3d_region(filename,fieldname,data,start,nread,domain, &
   character(len=*),                  intent(in) :: filename, fieldname
   real, dimension(:,:,:),         intent(inout) :: data ! 3 dimensional data
   integer, dimension(:),             intent(in) :: start, nread
-  type(domain2d), target,  optional, intent(in) :: domain
+  type(domain2d),          optional, intent(in) :: domain
   logical,                 optional, intent(in) :: no_domain
   integer,                 optional, intent(in) :: tile_count
   character(len=256)            :: fname
@@ -5719,7 +5709,7 @@ subroutine read_data_3d_region(filename,fieldname,data,start,nread,domain, &
   integer                       :: index_field ! position of the fieldname in the list of variables
   logical                       :: is_no_domain = .false.
   logical                       :: read_dist, io_domain_exist, found_file
-  type(domain2d), pointer, save :: d_ptr =>NULL()
+  type(domain2d)                :: d_ptr
 
 
 ! Initialize files to default values
@@ -5728,12 +5718,12 @@ subroutine read_data_3d_region(filename,fieldname,data,start,nread,domain, &
   if (PRESENT(no_domain)) is_no_domain = no_domain
 
   if(PRESENT(domain))then
-     d_ptr => domain
-  elseif (ASSOCIATED(Current_domain) .AND. .NOT. is_no_domain ) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  elseif (mpp_domain_is_defined(Current_domain) .AND. .NOT. is_no_domain ) then
+     d_ptr = Current_domain
   endif
 
-  if(.not. PRESENT(domain) .and. .not. ASSOCIATED(Current_domain) ) is_no_domain = .true.
+  if(.not. PRESENT(domain) .and. .not. mpp_domain_is_defined(Current_domain) ) is_no_domain = .true.
 
   found_file = get_file_name(filename, fname, read_dist, io_domain_exist, is_no_domain, domain,  tile_count)
   if(.not.found_file) call mpp_error(FATAL, 'fms_io_mod(read_data_2d_region): file ' //trim(filename)// &
@@ -5748,8 +5738,6 @@ subroutine read_data_3d_region(filename,fieldname,data,start,nread,domain, &
   endif
   call mpp_read(unit,files_read(file_index)%var(index_field)%field,data,start, nread)
 
-  d_ptr =>NULL()
-
   return
 end subroutine read_data_3d_region
 
@@ -5760,7 +5748,7 @@ subroutine read_data_2d_region_r8(filename,fieldname,data,start,nread,domain, &
   character(len=*),                  intent(in) :: filename, fieldname
   real(kind=8), dimension(:,:),      intent(inout) :: data ! 3 dimensional data
   integer, dimension(:),             intent(in) :: start, nread
-  type(domain2d), target,  optional, intent(in) :: domain
+  type(domain2d),          optional, intent(in) :: domain
   logical,                 optional, intent(in) :: no_domain
   integer,                 optional, intent(in) :: tile_count
   character(len=256)            :: fname
@@ -5769,7 +5757,7 @@ subroutine read_data_2d_region_r8(filename,fieldname,data,start,nread,domain, &
   integer                       :: index_field ! position of the fieldname in the list of variables
   logical                       :: is_no_domain = .false.
   logical                       :: read_dist, io_domain_exist, found_file
-  type(domain2d), pointer, save :: d_ptr =>NULL()
+  type(domain2d)                :: d_ptr
 
 
 ! Initialize files to default values
@@ -5778,12 +5766,12 @@ subroutine read_data_2d_region_r8(filename,fieldname,data,start,nread,domain, &
   if (PRESENT(no_domain)) is_no_domain = no_domain
 
   if(PRESENT(domain))then
-     d_ptr => domain
-  elseif (ASSOCIATED(Current_domain) .AND. .NOT. is_no_domain ) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  elseif (mpp_domain_is_defined(Current_domain) .AND. .NOT. is_no_domain ) then
+     d_ptr = Current_domain
   endif
 
-  if(.not. PRESENT(domain) .and. .not. ASSOCIATED(Current_domain) ) is_no_domain = .true.
+  if(.not. PRESENT(domain) .and. .not. mpp_domain_is_defined(Current_domain) ) is_no_domain = .true.
 
   found_file = get_file_name(filename, fname, read_dist, io_domain_exist, is_no_domain, domain,  tile_count)
   if(.not.found_file) call mpp_error(FATAL, 'fms_io_mod(read_data_2d_region): file ' //trim(filename)// &
@@ -5798,8 +5786,6 @@ subroutine read_data_2d_region_r8(filename,fieldname,data,start,nread,domain, &
   endif
   call mpp_read(unit,files_read(file_index)%var(index_field)%field,data,start, nread)
 
-  d_ptr =>NULL()
-
   return
 end subroutine read_data_2d_region_r8
 
@@ -5808,7 +5794,7 @@ subroutine read_data_3d_region_r8(filename,fieldname,data,start,nread,domain, &
   character(len=*),                  intent(in) :: filename, fieldname
   real(kind=8), dimension(:,:,:),    intent(inout) :: data ! 3 dimensional data
   integer, dimension(:),             intent(in) :: start, nread
-  type(domain2d), target,  optional, intent(in) :: domain
+  type(domain2d),          optional, intent(in) :: domain
   logical,                 optional, intent(in) :: no_domain
   integer,                 optional, intent(in) :: tile_count
   character(len=256)            :: fname
@@ -5817,7 +5803,7 @@ subroutine read_data_3d_region_r8(filename,fieldname,data,start,nread,domain, &
   integer                       :: index_field ! position of the fieldname in the list of variables
   logical                       :: is_no_domain = .false.
   logical                       :: read_dist, io_domain_exist, found_file
-  type(domain2d), pointer, save :: d_ptr =>NULL()
+  type(domain2d)                :: d_ptr
 
 
 ! Initialize files to default values
@@ -5826,12 +5812,12 @@ subroutine read_data_3d_region_r8(filename,fieldname,data,start,nread,domain, &
   if (PRESENT(no_domain)) is_no_domain = no_domain
 
   if(PRESENT(domain))then
-     d_ptr => domain
-  elseif (ASSOCIATED(Current_domain) .AND. .NOT. is_no_domain ) then
-     d_ptr => Current_domain
+     d_ptr = domain
+  elseif (mpp_domain_is_defined(Current_domain) .AND. .NOT. is_no_domain ) then
+     d_ptr = Current_domain
   endif
 
-  if(.not. PRESENT(domain) .and. .not. ASSOCIATED(Current_domain) ) is_no_domain = .true.
+  if(.not. PRESENT(domain) .and. .not. mpp_domain_is_defined(Current_domain) ) is_no_domain = .true.
 
   found_file = get_file_name(filename, fname, read_dist, io_domain_exist, is_no_domain, domain,  tile_count)
   if(.not.found_file) call mpp_error(FATAL, 'fms_io_mod(read_data_2d_region): file ' //trim(filename)// &
@@ -5845,8 +5831,6 @@ subroutine read_data_3d_region_r8(filename,fieldname,data,start,nread,domain, &
      call mpp_error(FATAL, 'fms_io_mod(read_data_3d_region_r8): the field should not be a dimension variable')
   endif
   call mpp_read(unit,files_read(file_index)%var(index_field)%field,data,start, nread)
-
-  d_ptr =>NULL()
 
   return
 end subroutine read_data_3d_region_r8
@@ -6340,7 +6324,7 @@ subroutine write_data_4d ( unit, data )
   real, dimension(isg:ieg,jsg:jeg,size(data,3),size(data,4)) :: gdata
   integer :: n
 
-  if (.not.associated(Current_domain))  &
+  if (.not.mpp_domain_is_defined(Current_domain))  &
        call mpp_error(FATAL,'fms_io(write_data_4d): need to call set_domain ')
 
 ! get the global data and write only on root pe
@@ -7399,13 +7383,12 @@ end subroutine close_file
 ! </IN>
 subroutine set_domain (Domain2)
 
-  type(domain2D), intent(in), target :: Domain2
+  type(domain2D), intent(in)  :: Domain2
 
   if (.NOT.module_is_initialized) call fms_io_init ( )
 
 !  --- set_domain must be called before a read_data or write_data ---
-  if (associated(Current_domain)) nullify (Current_domain)
-  Current_domain => Domain2
+  Current_domain = Domain2
 
   !  --- module indexing to shorten read/write routines ---
 
@@ -7424,8 +7407,7 @@ subroutine nullify_domain ()
   if (.NOT.module_is_initialized) call fms_io_init ( )
 
 !  --- set_domain must be called before a read_data or write_data ---
-
-  if (associated(Current_domain)) nullify (Current_domain)
+  Current_domain = NULL_DOMAIN2D
   is=0;ie=0;js=0;je=0
   isd=0;ied=0;jsd=0;jed=0
   isg=0;ieg=0;jsg=0;jeg=0
@@ -7443,7 +7425,7 @@ end subroutine nullify_domain
 subroutine return_domain(domain2)
   type(domain2D), intent(inout) :: domain2
 
-  if (associated(Current_domain)) then
+  if (mpp_domain_is_defined(Current_domain)) then
      domain2 = Current_domain
   else
      domain2 = NULL_DOMAIN2D
@@ -7755,12 +7737,12 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
     character(len=*), intent(in)                   :: file_in
     character(len=*), intent(out)                  :: file_out
     logical,          intent(in)                   :: is_no_domain
-    type(domain2D),   intent(in), optional, target :: domain
+    type(domain2D),   intent(in), optional         :: domain
     integer,          intent(in), optional         :: tile_count
     character(len=256)                             :: basefile, tilename
     integer                                        :: lens, ntiles, ntileMe, tile, my_tile_id
     integer, dimension(:), allocatable             :: tile_id
-    type(domain2d), pointer, save                  :: d_ptr =>NULL()
+    type(domain2d)                                 :: d_ptr
     logical                                        :: domain_exist
 
     if(index(file_in, '.nc', back=.true.)==0) then
@@ -7779,11 +7761,11 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
     if(PRESENT(domain))then
        domain_exist = .true.
        ntiles = mpp_get_ntile_count(domain)
-       d_ptr => domain
-    elseif (ASSOCIATED(Current_domain) .AND. .NOT. is_no_domain ) then
+       d_ptr = domain
+    elseif (mpp_domain_is_defined(Current_domain) .AND. .NOT. is_no_domain ) then
        domain_exist = .true.
        ntiles = mpp_get_ntile_count(Current_domain)
-       d_ptr => Current_domain
+       d_ptr = Current_domain
     endif
 
     if(domain_exist) then
@@ -7804,8 +7786,6 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
     if(allocated(tile_id)) deallocate(tile_id)
 
     file_out = trim(basefile)//'.nc'
-
-    d_ptr =>NULL()
 
   end subroutine get_mosaic_tile_file_sg
 
@@ -7946,11 +7926,11 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
     logical,                         intent(out) :: read_dist
     logical,                         intent(out) :: io_domain_exist
     logical,                optional, intent(in) :: no_domain
-    type(domain2D), target, optional, intent(in) :: domain
+    type(domain2D),         optional, intent(in) :: domain
     integer,                optional, intent(in) :: tile_count
     logical                                      :: get_file_name
 
-    type(domain2d), pointer, save :: d_ptr, io_domain
+    type(domain2d)                :: d_ptr, io_domain
     logical                       :: fexist, is_no_domain
     integer                       :: tile_id(1)
     character(len=256)            :: fname
@@ -7976,9 +7956,9 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
     endif
 
     if(present(domain)) then
-       d_ptr => domain
-    elseif (ASSOCIATED(Current_domain) .AND. .NOT. is_no_domain ) then
-       d_ptr => Current_domain
+       d_ptr = domain
+    elseif (mpp_domain_is_defined(Current_domain) .AND. .NOT. is_no_domain ) then
+       d_ptr = Current_domain
     endif
 
 
@@ -7987,9 +7967,9 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
     call get_mosaic_tile_file(orig_file, actual_file, is_no_domain, domain, tile_count)
 
     !--- check if the file is group redistribution.
-    if(ASSOCIATED(d_ptr)) then
-       io_domain => mpp_get_io_domain(d_ptr)
-       if(associated(io_domain)) then
+    if(mpp_domain_is_defined(d_ptr)) then
+       io_domain = mpp_get_io_domain(d_ptr)
+       if(mpp_domain_is_defined(io_domain)) then
           tile_id = mpp_get_tile_id(io_domain)
           write(fname, '(a,i4.4)' ) trim(actual_file)//'.', tile_id(1)
           inquire (file=trim(fname), exist=fexist)
@@ -7999,19 +7979,16 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
           endif
           if(fexist) io_domain_exist = .true.
        endif
-       io_domain=>NULL()
     endif
 
     if(fexist) then
        read_dist = .true.
-       d_ptr => NULL()
        get_file_name = .true.
        return
     endif
 
     inquire (file=trim(actual_file), exist=fexist)
     if(fexist) then
-       d_ptr => NULL()
        get_file_name = .true.
        return
     endif
@@ -8022,7 +7999,6 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
        if(index(orig_file, '.nc', back=.true.) == 0) then
           inquire (file=trim(actual_file), exist=fexist)
           if(fexist) then
-             d_ptr => NULL()
              get_file_name = .true.
              return
           endif
@@ -8033,9 +8009,9 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
        call get_mosaic_tile_file(actual_file_tmp, actual_file, is_no_domain, domain, tile_count)
 
        !--- check if the file is group redistribution.
-       if(ASSOCIATED(d_ptr)) then
-          io_domain => mpp_get_io_domain(d_ptr)
-          if(associated(io_domain)) then
+       if(mpp_domain_is_defined(d_ptr)) then
+          io_domain = mpp_get_io_domain(d_ptr)
+          if(mpp_domain_is_defined(io_domain)) then
              tile_id = mpp_get_tile_id(io_domain)
              if(mpp_npes()>10000) then
                 write(fname, '(a,i6.6)' ) trim(actual_file)//'.', tile_id(1)
@@ -8045,12 +8021,10 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
              inquire (file=trim(fname), exist=fexist)
              if(fexist) io_domain_exist = .true.
           endif
-          io_domain=>NULL()
        endif
 
        if(fexist) then
           read_dist = .true.
-          d_ptr => NULL()
           get_file_name = .true.
           return
        endif
@@ -8058,7 +8032,6 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
        inquire (file=trim(actual_file), exist=fexist)
 
        if(fexist) then
-          d_ptr => NULL()
           get_file_name = .true.
           return
        endif
@@ -8097,7 +8070,7 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
           if(present(domain)) then
              call mpp_open(unit,filename,form=form,action=MPP_RDONLY,threading=MPP_MULTI, &
                 fileset=MPP_MULTI, domain=domain)
-          else if(ASSOCIATED(current_domain) ) then
+          else if(mpp_domain_is_defined(current_domain) ) then
              call mpp_open(unit,filename,form=form,action=MPP_RDONLY,threading=MPP_MULTI, &
                 fileset=MPP_MULTI, domain=current_domain)
           else
@@ -8297,7 +8270,7 @@ function open_file(file, form, action, access, threading, recl, dist) result(uni
  function field_exist (file_name, field_name, domain, no_domain)
   character(len=*),                 intent(in) :: file_name
   character(len=*),                 intent(in) :: field_name
-  type(domain2d), intent(in), optional, target :: domain
+  type(domain2d), intent(in), optional         :: domain
   logical,       intent(in),  optional         :: no_domain
   logical                      :: field_exist, is_no_domain
   integer                      :: unit, ndim, nvar, natt, ntime, i, nfile
