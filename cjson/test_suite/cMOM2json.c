@@ -213,7 +213,7 @@ int is_blank( char* fline ){ /* memory safe */
 
 /* >>>>>>          MOM_input Converter         <<<< */
 
-void tokenize( char* tokens[], int size, char* line ){
+void ctokenize( char* tokens[], int size, char* line ){
     int i;
     //printf("Line Tokener: |%s|\n", line);
     tokens[0] = strtok(line, "=" ); // mandatory
@@ -361,7 +361,7 @@ cJSON* MOM2json_v2( char* file_loc ){ /* "./MOM_input" */
            char* tokens[5] = { NULL, NULL,  NULL,  NULL, NULL };
                             // var   value  units  def   default_value
            
-           tokenize(tokens, 5, fline);
+           ctokenize(tokens, 5, fline);
            if( obj == NULL ){
                cJSON_AddItemToObject(root, "module" , obj = cJSON_CreateObject());
                cJSON_AddItemToObject(obj, tokens[0], fmt = cJSON_CreateObject());
