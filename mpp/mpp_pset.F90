@@ -466,7 +466,6 @@ contains
   end subroutine mpp_pset_segment_array
 
   subroutine mpp_pset_stack_push( pset, ptr, len )
-!mpp_malloc specialized for shared arrays
 !len is the length of the required array
 !lstack is the stack already in play
 !user should zero lstack (call mpp_pset_stack_reset) when the stack is to be cleared

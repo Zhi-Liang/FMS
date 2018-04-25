@@ -66,8 +66,8 @@ subroutine mpp_open_(context, &
     logical,intent(in),optional :: is_root_rank
     integer(kind=c_int),intent(in),optional :: threading
     integer(kind=c_int),intent(in),optional :: fileset
-    type(domain2D),intent(in),target,optional :: domain
-    type(domainUG),intent(in),target,optional :: domain_ug
+    type(domain2D),intent(in),optional :: domain
+    type(domainUG),intent(in),optional :: domain_ug
 
     !Local variables
     integer(kind=c_int) :: action_flag
@@ -82,10 +82,12 @@ subroutine mpp_open_(context, &
     logical(kind=c_bool) :: is_reader
     logical(kind=c_bool) :: is_writer
     integer(kind=c_int) :: pelist_size
-    type(domain2d),pointer :: domain_ptr
-    type(domain2d),pointer :: io_domain_ptr
-    type(domainUG),pointer :: domain_ug_ptr
-    type(domainUG),pointer :: io_domain_ug_ptr
+
+    type(domain2d) :: domain_
+    type(domain2d) :: io_domain
+    type(domainUG) :: domain_ug_
+    type(domainUG) :: io_domain_ug
+
     integer(kind=c_int) :: nc_pos
     character(len=MPP_IO_MAX_FILENAME_LEN) :: fname_full
     integer(kind=c_int),dimension(2) :: io_layout
@@ -307,35 +309,36 @@ subroutine mpp_open_(context, &
         endif
 
         !If present, store a pointer to the inputted domains.
-        domain_ptr => null()
-        io_domain_ptr => null()
-        domain_ug_ptr => null()
-        io_domain_ug_ptr => null()
+        domain_ = NULL_DOMAIN2D
+        io_domain = NULL_DOMAIN2D
+        domain_ug_ = NULL_DOMAINUG
+        io_domain_ug = NULL_DOMAINUG
         if (present(domain)) then
-            domain_ptr => domain
-            if (associated(domain_ptr)) then
-                io_domain_ptr => mpp_get_io_domain(domain)
+            domain_ = domain
+            if (mpp_domain_is_defined(domain)) then
+                io_domain = mpp_get_io_domain(domain)
             endif
         elseif (present(domain_ug)) then
-            domain_ug_ptr => domain_ug
-            if (associated(domain_ug_ptr)) then
-                io_domain_ug_ptr => mpp_get_UG_io_domain(domain_ug)
+            domain_ug_ = domain_ug
+            if (mpp_domainUG_is_defined(domain_ug)) then
+                io_domain_ug = mpp_get_UG_io_domain(domain_ug)
             endif
         endif
 
-        if (associated(io_domain_ptr) .or. associated(io_domain_ug_ptr)) then
+        if (mpp_domain_is_defined(io_domain) .or. &
+            mpp_domainUG_is_defined(io_domain_ug)) then
 
             !Handle cases that involve an I/O domain.
 
-            if (associated(io_domain_ptr)) then
-                pelist_root = mpp_get_domain_tile_root_pe(io_domain_ptr)
-                io_layout = mpp_get_io_domain_layout(domain_ptr)
+            if (mpp_domain_is_defined(io_domain)) then
+                pelist_root = mpp_get_domain_tile_root_pe(io_domain)
+                io_layout = mpp_get_io_domain_layout(domain_)
                 num_io_domain_tiles = io_layout(1)*io_layout(2)
 
             else
-                call mpp_get_UG_domain_tile_pe_inf(io_domain_ug_ptr, &
+                call mpp_get_UG_domain_tile_pe_inf(io_domain_ug, &
                                                    root_pe=pelist_root)
-                num_io_domain_tiles = mpp_get_io_domain_UG_layout(domain_ug_ptr)
+                num_io_domain_tiles = mpp_get_io_domain_UG_layout(domain_ug_)
 
             endif
 
@@ -529,7 +532,8 @@ subroutine mpp_open_(context, &
                 fname_full = trim(file_name)
             endif
 
-            if (associated(io_domain_ptr) .or. associated(io_domain_ug_ptr)) then
+            if (mpp_domain_is_defined(io_domain) .or. &
+                mpp_domainUG_is_defined(io_domain_ug)) then
 
                 !Modify file names by appending unique identifiers, if
                 !there will be more than one file.
@@ -537,11 +541,11 @@ subroutine mpp_open_(context, &
                 if (num_io_domain_tiles .gt. 1) then
 
                     !I/O domain tile ids are used as unique identifiers.
-                    if (associated(io_domain_ptr)) then
-                        io_domain_tile_id = mpp_get_tile_id(io_domain_ptr)
+                    if (mpp_domain_is_defined(io_domain)) then
+                        io_domain_tile_id = mpp_get_tile_id(io_domain)
                         fname_suffix = io_domain_tile_id(1)
                     else
-                        fname_suffix = mpp_get_UG_domain_tile_id(io_domain_ug_ptr)
+                        fname_suffix = mpp_get_UG_domain_tile_id(io_domain_ug)
                     endif
 
                     !Check the that the file suffix is valid.
@@ -626,29 +630,27 @@ subroutine mpp_open_(context, &
         !broadcast the file index to the ranks that do not participate in
         !the I/O.  Store the I/O domain pointers and pelists needed for the
         !communication.
-        if (associated(io_domain_ptr)) then
+        if (mpp_domain_is_defined(io_domain)) then
 
             if (comm_required) then
-                pelist_size = mpp_get_domain_npes(io_domain_ptr)
+                pelist_size = mpp_get_domain_npes(io_domain)
                 allocate(context%files(file_index)%rank_list(pelist_size))
-                call mpp_get_pelist(io_domain_ptr, &
+                call mpp_get_pelist(io_domain, &
                                     context%files(file_index)%rank_list)
                 context%files(file_index)%rank_list_root = pelist_root
             endif
-            context%files(file_index)%io_domain = mpp_get_io_domain(domain)
-            io_domain_ptr => null()
+            context%files(file_index)%io_domain = mpp_get_io_domain(domain_)
 
-        elseif (associated(io_domain_ug_ptr)) then
+        elseif (mpp_domainUG_is_defined(io_domain_ug)) then
 
             if (comm_required) then
-                pelist_size = mpp_get_UG_domain_npes(io_domain_ug_ptr)
+                pelist_size = mpp_get_UG_domain_npes(io_domain_ug)
                 allocate(context%files(file_index)%rank_list(pelist_size))
-                call mpp_get_UG_domain_pelist(io_domain_ug_ptr, &
+                call mpp_get_UG_domain_pelist(io_domain_ug, &
                                               context%files(file_index)%rank_list)
                 context%files(file_index)%rank_list_root = pelist_root
             endif
-            context%files(file_index)%io_domain_ug = mpp_get_UG_io_domain(domain_ug)
-            io_domain_ug_ptr => null()
+            context%files(file_index)%io_domain_ug = mpp_get_UG_io_domain(domain_ug_)
 
         elseif (thread_flag .eq. MPP_SINGLE) then
 
@@ -662,12 +664,10 @@ subroutine mpp_open_(context, &
         endif
 
         !If present, store a copy of the input domain.
-        if (associated(domain_ptr)) then
-            context%files(file_index)%domain = domain
-            domain_ptr => null()
-        elseif(associated(domain_ug_ptr)) then
-            context%files(file_index)%domain_ug = domain_ug
-            domain_ug_ptr => null()
+        if (mpp_domain_is_defined(domain_)) then
+            context%files(file_index)%domain = domain_
+        elseif(mpp_domainUG_is_defined(domain_ug_)) then
+            context%files(file_index)%domain_ug = domain_ug_
         endif
 
         !Store the is_reader and is_writer flags for the file in the context.

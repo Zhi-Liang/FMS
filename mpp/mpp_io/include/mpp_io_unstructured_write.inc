@@ -162,7 +162,7 @@ subroutine mpp_write_unstructured_array(context, &
     real(kind=c_double),intent(in),optional :: default_data
 
     !Local variables
-    type(domainUG),pointer :: io_domain_ptr
+    type(domainUG) :: io_domain
     real(kind=c_double) :: fill
     integer(kind=c_int) :: num_ranks
     integer(kind=c_int),dimension(:),allocatable :: pelist
@@ -196,8 +196,8 @@ subroutine mpp_write_unstructured_array(context, &
     !will use the domain stored in the context instead of the one that was
     !passed in.  This is done so that we can remove the need to pass in a
     !domain in the future.
-    io_domain_ptr => null()
-    io_domain_ptr => mpp_get_UG_io_domain(domain)
+    io_domain = NULL_DOMAINUG
+    io_domain = mpp_get_UG_io_domain(domain)
 
     !Set the fill value.
     fill = 0
@@ -206,16 +206,16 @@ subroutine mpp_write_unstructured_array(context, &
     endif
 
     !Make sure that the I/O domain for this file is not null.
-    if (.not. associated(io_domain_ptr)) then
+    if (.not. mpp_domainUG_is_defined(io_domain)) then
         call mpp_error(FATAL, &
                        "mpp_write_unstructured_array: the io_domain corresponding" &
                            //" to this file must be defined.")
     endif
 
     !Get the pelist associated with the I/O domain.
-    num_ranks = mpp_get_UG_domain_npes(io_domain_ptr)
+    num_ranks = mpp_get_UG_domain_npes(io_domain)
     allocate(pelist(num_ranks))
-    call mpp_get_UG_domain_pelist(io_domain_ptr, &
+    call mpp_get_UG_domain_pelist(io_domain, &
                                   pelist)
 
     !Make sure that only the root rank of the pelist will write to the file.
@@ -264,7 +264,7 @@ subroutine mpp_write_unstructured_array(context, &
     else
         allocate(nelems_io(num_ranks))
         nelems_io = 0
-        call mpp_get_UG_compute_domains(io_domain_ptr, &
+        call mpp_get_UG_compute_domains(io_domain, &
                                         size=nelems_io)
 
     endif

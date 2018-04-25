@@ -132,7 +132,7 @@ subroutine mpp_read_compressed_array(context, &
     integer(kind=c_int) :: total_data_size
     integer(kind=c_int) :: i
     logical(kind=c_bool) :: all_read
-    type(domain2d),pointer :: io_domain_ptr
+    type(domain2d) :: io_domain
     integer(kind=c_int) :: io_domain_npes
     integer(kind=c_int),dimension(:),allocatable :: pelist
     real(kind=c_double),dimension(:),allocatable :: buf
@@ -196,16 +196,16 @@ subroutine mpp_read_compressed_array(context, &
         else
 
             !Get the I/O domain pelist.
-            io_domain_ptr => null()
-            io_domain_ptr => mpp_get_io_domain(domain)
-            if (.not. associated(io_domain_ptr)) then
+            io_domain = NULL_DOMAIN2D
+            io_domain = mpp_get_io_domain(domain)
+            if (.not. mpp_domain_is_defined(io_domain)) then
                 call mpp_error(FATAL, &
                                "mpp_read_compressed_array: io_domain must" &
                                    //" be defined.")
             endif
-            io_domain_npes = mpp_get_domain_npes(io_domain_ptr)
+            io_domain_npes = mpp_get_domain_npes(io_domain)
             allocate(pelist(io_domain_npes))
-            call mpp_get_pelist(io_domain_ptr, &
+            call mpp_get_pelist(io_domain, &
                                 pelist)
 
             !Local copy required by send/receive.
@@ -268,7 +268,6 @@ subroutine mpp_read_compressed_array(context, &
             deallocate(buf)
 
             deallocate(pelist)
-            io_domain_ptr => null()
         endif
     endif
 
