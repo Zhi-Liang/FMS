@@ -46,6 +46,9 @@ subroutine mpp_define_nest_domains(nest_domain, domainObj_fine, domainObj_coarse
   type(domain2D_private), pointer :: domain_fine=>NULL()
   type(domain2D_private), pointer :: domain_coarse=>NULL()
 
+  call check_domain2d_index(domainObj_fine, "mpp_define_nest_domains fine domain fine")
+  call check_domain2d_index(domainObj_coarse, "mpp_define_nest_domains fine domain coarse")
+
   domain_fine => domainList(domainObj_fine%index)
   domain_coarse => domainList(domainObj_coarse%index)
 

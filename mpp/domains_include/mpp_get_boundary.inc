@@ -175,6 +175,8 @@ subroutine mpp_get_boundary_2d(field, domain, ebuffer, sbuffer, wbuffer, nbuffer
   integer     :: b_size(4)
   type(C_PTR) :: f_cptr, b_cptr(4)
 
+  call check_domain2d_index(domain, "mpp_get_boundary_2d")
+
   if(.not. is_contiguous(field)) call mpp_error(FATAL, "mpp_get_boundary_2d: field is not contiguous")
   f_cptr = C_LOC(field)
   isize = size(field,1)
@@ -215,6 +217,8 @@ subroutine mpp_get_boundary_3d(field, domain, ebuffer, sbuffer, wbuffer, nbuffer
   integer     :: isize, jsize, ksize, data_type
   integer     :: b_size(4)
   type(C_PTR) :: f_cptr, b_cptr(4)
+
+  call check_domain2d_index(domain, "mpp_get_boundary_3d")
 
   if(.not. is_contiguous(field)) call mpp_error(FATAL, "mpp_get_boundary_3d: field is not contiguous")
   f_cptr = C_LOC(field)
@@ -504,6 +508,8 @@ subroutine mpp_get_boundary_2dv(fieldx, fieldy, domain, ebufferx, sbufferx, wbuf
   integer     :: b_sizex(4), b_sizey(4)
   type(C_PTR) :: f_cptrx, f_cptry, b_cptrx(4), b_cptry(4)
 
+  call check_domain2d_index(domain, "mpp_get_boundary_2dv")
+
   if(.not. is_contiguous(fieldx)) call mpp_error(FATAL, "mpp_get_boundary_2dv: fieldx is not contiguous")
   if(.not. is_contiguous(fieldy)) call mpp_error(FATAL, "mpp_get_boundary_2dv: fieldy is not contiguous")
   f_cptrx = C_LOC(fieldx)
@@ -571,6 +577,8 @@ subroutine mpp_get_boundary_3dv(fieldx, fieldy, domain, ebufferx, sbufferx, wbuf
   integer     :: isizex,jsizex,isizey,jsizey,ksizex,ksizey,data_typex,data_typey
   integer     :: b_sizex(4), b_sizey(4)
   type(C_PTR) :: f_cptrx, f_cptry, b_cptrx(4), b_cptry(4)
+
+  call check_domain2d_index(domain, "mpp_get_boundary_3dv")
 
   if(.not. is_contiguous(fieldx)) call mpp_error(FATAL, "mpp_get_boundary_3dv: fieldx is not contiguous")
   if(.not. is_contiguous(fieldy)) call mpp_error(FATAL, "mpp_get_boundary_3dv: fieldy is not contiguous")

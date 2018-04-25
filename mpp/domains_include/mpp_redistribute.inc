@@ -122,6 +122,8 @@ subroutine mpp_redistribute_2d( domainObj_in, field_in, domainObj_out, field_out
    type(domain2d_private), pointer :: domain_in=>NULL()
    type(domain2d_private), pointer :: domain_out=>NULL()
 
+   call check_domain2d_index(domainObj_in, "mpp_redistribute_2d domainObj_in")
+   call check_domain2d_index(domainObj_out, "mpp_redistribute_2d domainObj_out")
    domain_in => domainList(domainObj_in%index)
    domain_out => domainList(domainObj_out%index)
 
@@ -178,6 +180,9 @@ subroutine mpp_redistribute_3d( domainObj_in, field_in, domainObj_out, field_out
    type(DomainCommunicator2D),pointer,optional :: dc_handle
    type(domain2d_private), pointer :: domain_in=>NULL()
    type(domain2d_private), pointer :: domain_out=>NULL()
+
+   call check_domain2d_index(domainObj_in, "mpp_redistribute_3d domainObj_in")
+   call check_domain2d_index(domainObj_out, "mpp_redistribute_3d domainObj_out")
 
    domain_in => domainList(domainObj_in%index)
    domain_out => domainList(domainObj_out%index)
@@ -237,6 +242,9 @@ subroutine mpp_redistribute_4d( domainObj_in, field_in, domainObj_out, field_out
    type(domain2d_private), pointer :: domain_in=>NULL()
    type(domain2d_private), pointer :: domain_out=>NULL()
 
+   call check_domain2d_index(domainObj_in, "mpp_redistribute_4d domainObj_in")
+   call check_domain2d_index(domainObj_out, "mpp_redistribute_4d domainObj_out")
+
    domain_in => domainList(domainObj_in%index)
    domain_out => domainList(domainObj_out%index)
 
@@ -294,6 +302,9 @@ subroutine mpp_redistribute_5d( domainObj_in, field_in, domainObj_out, field_out
    type(DomainCommunicator2D),pointer,optional :: dc_handle
    type(domain2d_private), pointer :: domain_in=>NULL()
    type(domain2d_private), pointer :: domain_out=>NULL()
+
+   call check_domain2d_index(domainObj_in, "mpp_redistribute_5d domainObj_in")
+   call check_domain2d_index(domainObj_out, "mpp_redistribute_5d domainObj_out")
 
    domain_in => domainList(domainObj_in%index)
    domain_out => domainList(domainObj_out%index)

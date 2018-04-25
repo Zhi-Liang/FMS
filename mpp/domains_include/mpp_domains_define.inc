@@ -670,11 +670,11 @@
     from_mosaic = .false.
     if(present(is_mosaic)) from_mosaic = is_mosaic
     if(.not. from_mosaic) then
-       if(domainObj%index .NE. 0) call mpp_error(FATAL, "MPP_DEFINE_DOMAINS2D: domainObj%index should be zero")
+       if(domainObj%index .NE. DEFAULT_DOMAIN2D_INDEX) &
+            call mpp_error(FATAL, "MPP_DEFINE_DOMAINS2D: domainObj%index should be DEFAULT_DOMAIN2D_INDEX")
        cur_domain_index = cur_domain_index+1
        domainObj%index = cur_domain_index
     endif
-    call check_domain2d_index(domainObj, "MPP_DEFINE_DOMAINS2D")
     domain => domainList(domainObj%index)
 
     outunit = stdout()
@@ -1356,7 +1356,8 @@ end subroutine check_message_size_vector
     logical              :: send(8), recv(8)
     type(domain2d_private), pointer :: domain=>NULL()
 
-    if(domainObj%index .NE. 0) call mpp_error(FATAL, "mpp_define_mosaic: domainObj%index should be zero")
+    if(domainObj%index .NE. DEFAULT_DOMAIN2D_INDEX) &
+        call mpp_error(FATAL, "mpp_define_mosaic: domainObj%index should be DEFAULT_DOMAIN2D_INDEX")
     cur_domain_index = cur_domain_index+1
     domainObj%index = cur_domain_index
     call check_domain2d_index(domainObj, "mpp_define_mosaic")
@@ -7293,7 +7294,6 @@ type(domain2D), intent(inout) :: domainObj
 type(domain2d_private), pointer :: domain=>NULL()
 
 domainObj%index = DOMAIN2D_INDEX_START
-call check_domain2d_index(domainObj, "mpp_define_null_domain2D")
 domain => domainList(domainObj%index)
 
 if(ASSOCIATED(domain%x)) return

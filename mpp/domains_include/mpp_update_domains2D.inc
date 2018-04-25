@@ -43,6 +43,8 @@ subroutine mpp_update_domain_core(domainObj, cptr, isize_in, jsize_in, ksize_in,
   type(overlapSpec), pointer :: check  => NULL()
   type(domain2d_private), pointer :: domain => NULL()
 
+  call check_domain2d_index(domainObj, "mpp_update_domain_core")
+
   domain => domainList(domainObj%index)
   call get_domain_halos(domain, update_whalo, update_ehalo, update_shalo, update_nhalo, whalo, ehalo, shalo, nhalo)
 
@@ -318,6 +320,8 @@ subroutine mpp_update_domainV_core( domainObj, cptr_x, cptr_y, isizex_in, jsizex
   type(overlapSpec),  pointer :: checkx  => NULL()
   type(overlapSpec),  pointer :: checky  => NULL()
   type(domain2d_private), pointer :: domain=>NULL()
+
+  call check_domain2d_index(domainObj, "mpp_update_domainV_core")
 
   domain=>domainList(domainObj%index)
 

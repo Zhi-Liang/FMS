@@ -251,6 +251,8 @@ module mpp_domains_mod
   integer, parameter :: NAME_LENGTH = 64
   integer, parameter :: MAXLIST = 100
   integer, parameter :: MAXOVERLAP = 200
+  integer, parameter :: DEFAULT_DOMAIN2D_INDEX = -1
+  integer, parameter :: DEFAULT_DOMAINUG_INDEX = -1
   integer, parameter :: DOMAIN2D_INDEX_START = 0
   integer, parameter :: DOMAIN2D_INDEX_END = 200
   integer, parameter :: DOMAINUG_INDEX_START = 0
@@ -334,7 +336,7 @@ module mpp_domains_mod
   !--- public domain2D only contains the index in array domain2d_list
   type domain2D
      private
-     integer :: index=0
+     integer :: index=-1
   end type domain2D
 
 !domaintypes of higher rank can be constructed from type domain1D
@@ -412,7 +414,7 @@ module mpp_domains_mod
 
   type domainUG
      private
-     integer :: index = 0 ! index in domainUGList
+     integer :: index = -1 ! index in domainUGList
   end type domainUG
 
   type domainUG_private

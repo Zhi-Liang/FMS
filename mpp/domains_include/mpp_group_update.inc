@@ -118,6 +118,7 @@ subroutine mpp_create_group_update_2d(group, field, domainObj, flags, position, 
   type(C_PTR)    :: cptr
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_create_group_update_2d")
   domain => domainList(domainObj%index)
 
   if(.not. is_contiguous(field)) call mpp_error(FATAL, "mpp_create_group_update_2d: field is not contiguous")        
@@ -143,6 +144,7 @@ subroutine mpp_create_group_update_3d(group, field, domainObj, flags, position, 
   type(C_PTR)       :: cptr
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_create_group_update_3d")
   domain => domainList(domainObj%index)
 
   if(.not. is_contiguous(field)) call mpp_error(FATAL, "mpp_create_group_update_3d: field is not contiguous")
@@ -167,6 +169,7 @@ subroutine mpp_create_group_update_4d(group, field, domainObj, flags, position, 
   type(C_PTR)       :: cptr  
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_create_group_update_4d")
   domain => domainList(domainObj%index)
 
   if(.not. is_contiguous(field)) call mpp_error(FATAL, "mpp_create_group_update_4d: field is not contiguous")
@@ -318,6 +321,7 @@ subroutine mpp_create_group_update_2dv( group, fieldx, fieldy, domainObj, flags,
   type(C_PTR)       :: cptrx, cptry
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_create_group_update_2dv")
   domain => domainList(domainObj%index)
 
   if(.not. is_contiguous(fieldx)) call mpp_error(FATAL, "mpp_create_group_update_2dv: fieldx is not contiguous")
@@ -350,6 +354,7 @@ subroutine mpp_create_group_update_3dv( group, fieldx, fieldy, domainObj, flags,
   type(C_PTR)       :: cptrx, cptry
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_create_group_update_3dv")
   domain => domainList(domainObj%index)  
 
   if(.not. is_contiguous(fieldx)) call mpp_error(FATAL, "mpp_create_group_update_3dv: fieldx is not contiguous")
@@ -383,6 +388,7 @@ subroutine mpp_create_group_update_4dv( group, fieldx, fieldy, domainObj, flags,
   type(C_PTR)       :: cptrx, cptry
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_create_group_update_4dv")
   domain => domainList(domainObj%index)  
 
   if(.not. is_contiguous(fieldx)) call mpp_error(FATAL, "mpp_create_group_update_4dv: fieldx is not contiguous")
@@ -410,6 +416,7 @@ subroutine mpp_do_group_update(group, domainObj)
   real(FLOAT_KIND), pointer :: buffer_r4(:) => NULL()
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_do_group_update")
   domain => domainList(domainObj%index)  
 
   if(num_nonblock_group_update .NE. 0) then
@@ -440,6 +447,7 @@ subroutine mpp_start_group_update(group, domainObj, reuse_buffer)
   real(FLOAT_KIND), pointer :: buffer_r4(:) => NULL()
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_start_group_update")
   domain => domainList(domainObj%index)
 
   if(.not. group%initialized) call set_group_update(group,domain)
@@ -478,6 +486,7 @@ subroutine mpp_complete_group_update(group, domainObj)
   real(FLOAT_KIND), pointer :: buffer_r4(:) => NULL()
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_complete_group_update")
   domain => domainList(domainObj%index)
 
   if(num_nonblock_group_update < 1) call mpp_error(FATAL, &
@@ -825,6 +834,8 @@ function mpp_start_update_domain_2d( field, domain, flags, position, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
+  call check_domain2d_index(domain, "mpp_start_update_domain_2d")
+
   if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_2d: do not support multiple tile per pe, contact developer' )
   if(new_update) then
@@ -869,6 +880,8 @@ function mpp_start_update_domain_3d( field, domain, flags, position, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
+  call check_domain2d_index(domain, "mpp_start_update_domain_3d")
+
   if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_3d: do not support multiple tile per pe, contact developer' )
   if(new_update) then
@@ -912,6 +925,8 @@ function mpp_start_update_domain_4D( field, domain, flags, position, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
+  call check_domain2d_index(domain, "mpp_start_update_domain_4D")
+
   if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_3d: do not support multiple tile per pe, contact developer' )
   if(new_update) then
@@ -954,6 +969,8 @@ subroutine mpp_complete_update_domain_2d( id_update, field, domain, flags, posit
   logical :: is_complete
   integer :: n
 
+  call check_domain2d_index(domain, "mpp_complete_update_domain_2d")
+
   is_complete = .true.
   if(PRESENT(complete)) is_complete = complete
   
@@ -985,6 +1002,8 @@ subroutine mpp_complete_update_domain_3d( id_update, field, domain, flags, posit
   logical :: is_complete
   integer :: n
 
+  call check_domain2d_index(domain, "mpp_complete_update_domain_3d")
+
   is_complete = .true.
   if(PRESENT(complete)) is_complete = complete
 
@@ -1014,6 +1033,8 @@ subroutine mpp_complete_update_domain_4d( id_update, field, domain, flags, posit
   logical,          intent(in), optional :: complete
   logical :: is_complete
   integer :: n
+
+  call check_domain2d_index(domain, "mpp_complete_update_domain_4d")
 
   is_complete = .true.
   if(PRESENT(complete)) is_complete = complete
@@ -1047,6 +1068,8 @@ function mpp_start_update_domain_2dv( fieldx, fieldy, domain, flags, gridtype, &
   character(len=128)         :: text
   logical                    :: is_complete
   logical, save              :: new_update = .true.
+
+  call check_domain2d_index(domain, "mpp_start_update_domain_2dv")
 
   if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_2dv: do not support multiple tile per pe, contact developer' )
@@ -1092,6 +1115,7 @@ function mpp_start_update_domain_3dv( fieldx, fieldy, domain, flags, gridtype, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
+  call check_domain2d_index(domain, "mpp_start_update_domain_3dv")
 
   if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_3dv: do not support multiple tile per pe, contact developer' )
@@ -1137,6 +1161,8 @@ function mpp_start_update_domain_4dv( fieldx, fieldy, domain, flags, gridtype, &
   logical                    :: is_complete
   logical, save              :: new_update = .true.
 
+  call check_domain2d_index(domain, "mpp_start_update_domain_4dv")
+
   if(domainList(domain%index)%max_ntile_pe>1) &
      call mpp_error(FATAL,'mpp_start_update_domain_4dv: do not support multiple tile per pe, contact developer' )
   if(new_update) then
@@ -1181,6 +1207,8 @@ subroutine mpp_complete_update_domain_2dv( id_update, fieldx, fieldy, domain, fl
   integer :: n
   logical :: is_complete
 
+  call check_domain2d_index(domain, "mpp_complete_update_domain_2dv")
+
   is_complete = .true.
   if(PRESENT(complete)) is_complete = complete
 
@@ -1213,6 +1241,8 @@ subroutine mpp_complete_update_domain_3dv( id_update, fieldx, fieldy, domain, fl
   integer :: n
   logical :: is_complete
 
+  call check_domain2d_index(domain, "mpp_complete_update_domain_3dv")
+
   is_complete = .true.
   if(PRESENT(complete)) is_complete = complete
 
@@ -1243,6 +1273,8 @@ subroutine mpp_complete_update_domain_4dv( id_update, fieldx, fieldy, domain, fl
   logical,          intent(in), optional :: complete
   integer :: n
   logical :: is_complete
+
+  call check_domain2d_index(domain, "mpp_complete_update_domain_4dv")
 
   is_complete = .true.
   if(PRESENT(complete)) is_complete = complete
