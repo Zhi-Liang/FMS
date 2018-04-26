@@ -25,6 +25,7 @@ subroutine mpp_global_field_2d( domain, local, global, flags, position,tile_coun
   integer,  intent(in),  optional :: tile_count
   class(*), intent(in),  optional :: default_data
 
+  call check_domain2d_index(domain, "mpp_global_field_2d")
   call global_field_2d_private(domainList(domain%index), local, global, flags, position,tile_count, default_data)
 
 end subroutine mpp_global_field_2d
@@ -59,6 +60,7 @@ subroutine mpp_global_field_3d( domain, local, global, flags, position,tile_coun
   integer,  intent(in), optional :: tile_count
   class(*), intent(in), optional :: default_data
 
+  call check_domain2d_index(domain, "mpp_global_field_3d")
   call global_field_3d_private(domainList(domain%index), local, global, flags, position,tile_count, default_data)
 
 end subroutine mpp_global_field_3d
@@ -192,6 +194,7 @@ subroutine mpp_global_field_4d( domain, local, global, flags, position,tile_coun
   integer,  intent(in), optional :: tile_count
   class(*), intent(in), optional :: default_data
 
+  call check_domain2d_index(domain, "mpp_global_field_4d")
   call global_field_4d_private(domainList(domain%index), local, global, flags, position,tile_count, default_data)
 
 end subroutine mpp_global_field_4d
@@ -227,6 +230,7 @@ subroutine mpp_global_field_5d( domain, local, global, flags, position,tile_coun
   integer,  intent(in),  optional :: tile_count
   class(*), intent(in),  optional :: default_data
 
+  call check_domain2d_index(domain, "mpp_global_field_5d")
   call global_field_5d_private(domain, local, global, flags, position,tile_count, default_data)
 
 end subroutine mpp_global_field_5d

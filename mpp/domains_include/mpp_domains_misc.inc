@@ -215,6 +215,7 @@
                                                    ! implemented. 
   type(domain2d_private), pointer :: domain=>NULL()
 
+  call check_domain2d_index(domainObj, "mpp_check_field_2D")
   domain => domainList(domainObj%index)
      if(present(position)) then
         if(position .NE. CENTER .AND. domain%symmetry) call mpp_error(FATAL,  &
@@ -449,11 +450,11 @@
 !broadcast domain (useful only outside the context of its own pelist)
       type(domain2D), intent(inout) :: domain
 
-      if(domain%index == 0) then
+      if(domain%index == DEFAULT_DOMAIN2D_INDEX ) then
          cur_domain_index = cur_domain_index+1
          domain%index = cur_domain_index
-         call check_domain2d_index(domain, "mpp_broadcast_domain_1")
       endif
+      call check_domain2d_index(domain, "mpp_broadcast_domain_1")
       call broadcast_domain_1(domainList(domain%index))
 
     end subroutine mpp_broadcast_domain_1
@@ -573,8 +574,11 @@
       type(domain2D), intent(in)    :: domain_in
       type(domain2D), intent(inout) :: domain_out
   
-      if(domain_in%index == 0) call mpp_error( FATAL, 'MPP_BROADCAST_DOMAIN_2: domain_in%index == 0')
-      if(domain_out%index .NE. 0) call mpp_error( FATAL, 'MPP_BROADCAST_DOMAIN_2: domain_out%index .NE. 0')
+      call check_domain2d_index(domain_in, "mpp_broadcast_domain_2")
+      if(domain_in%index == DEFAULT_DOMAIN2D_INDEX)  &
+            call mpp_error( FATAL, 'MPP_BROADCAST_DOMAIN_2: domain_in%index == DEFAULT_DOMAIN2D_INDEX')
+      if(domain_out%index .NE. DEFAULT_DOMAIN2D_INDEX) &
+          call mpp_error( FATAL, 'MPP_BROADCAST_DOMAIN_2: domain_out%index .NE. DEFAULT_DOMAIN2D_INDEX')
       cur_domain_index = cur_domain_index+1
       domain_out%index = cur_domain_index
       call check_domain2d_index(domain_out, "mpp_broadcast_domain_2")      

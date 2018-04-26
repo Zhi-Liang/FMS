@@ -42,7 +42,8 @@
      type(domainUG_private), pointer :: io_domain     
      type(domainUG) :: io_domainObj
 
-     if(UG_domainObj%index .NE. 0) call mpp_error(FATAL, "mpp_define_unstruct_domain: UG_domainObj%index should be zero")
+     if(UG_domainObj%index .NE. DEFAULT_DOMAINUG_INDEX) &
+        call mpp_error(FATAL, "mpp_define_unstruct_domain: UG_domainObj%index should be DEFAULT_DOMAINUG_INDEX")
      cur_domainUG_index = cur_domainUG_index+1
      UG_domainObj%index = cur_domainUG_index
      call check_domainUG_index(UG_domainObj, "mpp_define_unstruct_domain")
@@ -418,6 +419,7 @@ return
      type(domainUG), intent(in) :: domain
      type(domainUG)             :: mpp_get_UG_io_domain
 
+     call check_domainUG_index(domain, "mpp_get_UG_io_domain")
      if(domainUGList(domain%index)%io_domain_index == 0) &
          call mpp_error(FATAL, "mpp_get_UG_io_domain: io_domain is not defined, contact developer")
      mpp_get_UG_io_domain%index = domainUGList(domain%index)%io_domain_index
@@ -430,6 +432,7 @@ return
     integer, intent(out), optional :: begin, end, size
     type(domainUG_private), pointer :: domain=> NULL()
 
+    call check_domainUG_index(domainObj, "mpp_get_UG_compute_domain")
     domain => domainUGList(domainObj%index)
     if( PRESENT(begin)     )begin     = domain%compute%begin
     if( PRESENT(end)       )end       = domain%compute%end
@@ -443,6 +446,7 @@ return
     integer, intent(out), optional :: begin, end, size
     type(domainUG_private), pointer :: domain=> NULL()
 
+    call check_domainUG_index(domainObj, "mpp_get_UG_global_domain")
     domain => domainUGList(domainObj%index)
     if( PRESENT(begin)     )begin     = domain%global%begin
     if( PRESENT(end)       )end       = domain%global%end
@@ -456,6 +460,7 @@ return
     integer, intent(out), optional, dimension(:) :: begin, end, size
     type(domainUG_private), pointer :: domain=> NULL()
 
+    call check_domainUG_index(domainObj, "mpp_get_UG_compute_domains")
     domain => domainUGList(domainObj%index)
 
     !we use shape instead of size for error checks because size is used as an argument
@@ -483,6 +488,7 @@ return
     integer, intent(out), dimension(:) :: begin, end
     type(domainUG_private), pointer :: domain=> NULL()
 
+    call check_domainUG_index(domainObj, "mpp_get_UG_domains_index")
     domain => domainUGList(domainObj%index)
 
     !we use shape instead of size for error checks because size is used as an argument
@@ -500,6 +506,7 @@ return
     type(domainUG),  intent(in) :: domain
     integer :: mpp_get_UG_domain_ntiles
 
+    call check_domainUG_index(domain, "mpp_get_UG_domain_ntiles")
     mpp_get_UG_domain_ntiles = domainUGList(domain%index)%ntiles
     return
   end function mpp_get_UG_domain_ntiles
@@ -511,6 +518,7 @@ return
      integer                    :: i
      type(domainUG_private), pointer :: domain=> NULL()
 
+     call check_domainUG_index(domainObj, "mpp_get_ug_domain_tile_list")
      domain => domainUGList(domainObj%index)
 
      if( size(tiles(:)).NE.size(domain%list(:)) ) &
@@ -526,6 +534,7 @@ return
     type(domainUG),  intent(in) :: domain
     integer :: mpp_get_UG_domain_tile_id
 
+    call check_domainUG_index(domain, "mpp_get_UG_domain_tile_id")
     mpp_get_UG_domain_tile_id = domainUGList(domain%index)%tile_id
     return
   end function mpp_get_UG_domain_tile_id
@@ -535,6 +544,7 @@ return
      type(domainUG), intent(in) :: domain
      integer :: mpp_get_UG_domain_npes
 
+     call check_domainUG_index(domain, "mpp_get_UG_domain_npes")
      mpp_get_UG_domain_npes = size(domainUGList(domain%index)%list(:))
      return
 
@@ -547,6 +557,7 @@ return
      integer,              intent(out) :: pelist(:)
      type(domainUG_private), pointer :: domain=> NULL()
 
+     call check_domainUG_index(domainObj, "mpp_get_UG_domain_pelist")
      domain => domainUGList(domainObj%index)
 
      if( size(pelist(:)).NE.size(domain%list(:)) ) &
@@ -564,6 +575,7 @@ return
      integer, optional, intent(out) :: pelist(:)
      type(domainUG_private), pointer :: domain=> NULL()
 
+     call check_domainUG_index(domainObj, "mpp_get_UG_domain_tile_pe_inf")
      domain => domainUGList(domainObj%index)
      if(present(root_pe)) root_pe = domain%tile_root_pe
      if(present(npes)) root_pe = domain%tile_npes
@@ -584,6 +596,7 @@ return
      integer,              intent(out) :: grid_index(:)
      type(domainUG_private), pointer :: domain=> NULL()
 
+     call check_domainUG_index(domainObj, "mpp_get_UG_domain_grid_index")
      domain => domainUGList(domainObj%index)
 
      if( size(grid_index(:)).NE.size(domain%grid_index(:)) ) &
@@ -600,7 +613,6 @@ return
      type(domainUG_private), pointer :: domain=>NULL();
 
      domainObj%index = DOMAINUG_INDEX_START
-     call check_domainUG_index(domainObj, "mpp_define_null_UG_domain")
      domain => domainUGList(domainObj%index)
   
      domain%global%begin  = -1; domain%global%end  = -1; domain%global%size = 0
@@ -638,12 +650,13 @@ return
 
 !set local list size
       if( native )then
+          call check_domainUG_index(domainObj, "mpp_broadcast_domain_ug 1")
           domain => domainUGList(domainObj%index)
           listsize = size(domain%list(:))
       else
           cur_domainUG_index = cur_domainUG_index+1
           domainObj%index = cur_domainUG_index
-          call check_domainUG_index(domainObj, "mpp_broadcast_domain_ug")
+          call check_domainUG_index(domainObj, "mpp_broadcast_domain_ug 2")
           domain => domainUGList(domainObj%index)
           listsize = 0
       end if
@@ -695,6 +708,7 @@ function mpp_domain_UG_is_tile_root_pe(domain) result(is_root)
     type(domainUG),intent(in) :: domain
     logical(INT_KIND)         :: is_root
 
+    call check_domainUG_index(domain, "mpp_domain_UG_is_tile_root_pe")
     if (domainUGList(domain%index)%pe .eq. domainUGList(domain%index)%tile_root_pe) then
         is_root = .true.
     else
@@ -714,6 +728,7 @@ function mpp_get_io_domain_UG_layout(domain) result(io_layout)
     type(domainUG),intent(in) :: domain
     integer(INT_KIND)         :: io_layout
 
+    call check_domainUG_index(domain, "mpp_get_io_domain_UG_layout")
     io_layout = domainUGList(domain%index)%io_layout
 
     return
@@ -757,6 +772,7 @@ subroutine mpp_deallocate_domainUG(domainObj)
     type(domainUG_private), pointer :: domain=>NULL()
     type(domainUG_private), pointer :: io_domain=>NULL()
 
+    call check_domainUG_index(domainObj, "mpp_deallocate_domainUG")
     domain=>domainUGList(domainObj%index)
 
     if (associated(domain%list)) then
@@ -788,14 +804,57 @@ end subroutine mpp_deallocate_domainUG
 
   !###################################################################
   !> Overload the .eq. for UG
-  function mpp_domainUG_eq( a, b )
+  function mpp_domainUG_eq( aObj, bObj )
     logical                    :: mpp_domainUG_eq
-    type(domainUG), intent(in) :: a, b
+    type(domainUG), intent(in) :: aObj, bObj
 
-    mpp_domainUG_eq = a%index == b%index
-    
+    call check_domainUG_index(aObj, "mpp_domainUG_eq aObj")
+    call check_domainUG_index(bObj, "mpp_domainUG_eq bObj")
+
+    if( aObj%index == bObj%index ) then
+       mpp_domainUG_eq = .true.
+    else
+       mpp_domainUG_eq = mpp_domainUG_eq_private( domainUGList(aObj%index), domainUGList(bObj%index) )
+    endif    
+
     return
   end function mpp_domainUG_eq
+
+  function mpp_domainUG_eq_private( a, b )
+    logical                    :: mpp_domainUG_eq_private
+    type(domainUG_private), intent(in) :: a, b
+    type(domain2D) :: a_domain2d, b_domain2d
+
+    a_domain2d%index = a%sg_domain_index
+    b_domain2d%index = b%sg_domain_index
+
+    if (a_domain2d .ne. b_domain2d) then
+        mpp_domainUG_eq_private = .false.
+        return
+    endif
+
+    mpp_domainUG_eq_private = (a%npes_io_group .EQ. b%npes_io_group) .AND. &
+                      (a%pos .EQ. b%pos)                     .AND. &
+                      (a%ntiles .EQ. b%ntiles)               .AND. &
+                      (a%tile_id .EQ. b%tile_id)             .AND. &
+                      (a%tile_npes .EQ. b%tile_npes)         .AND. &
+                      (a%tile_root_pe .EQ. b%tile_root_pe)
+
+    if(.not. mpp_domainUG_eq_private) return
+
+    mpp_domainUG_eq_private = ( a%compute%begin.EQ.b%compute%begin .AND. &
+         a%compute%end  .EQ.b%compute%end   .AND. &
+         a%global%begin .EQ.b%global%begin  .AND. &
+         a%global%end   .EQ.b%global%end    .AND. &
+         a%SG2UG%nsend  .EQ.b%SG2UG%nsend   .AND. &
+         a%SG2UG%nrecv  .EQ.b%SG2UG%nrecv   .AND. &
+         a%UG2SG%nsend  .EQ.b%UG2SG%nsend   .AND. &
+         a%UG2SG%nrecv  .EQ.b%UG2SG%nrecv         &
+    )
+
+    return
+  end function mpp_domainUG_eq_private
+
 
   !> Overload the .ne. for UG
   function mpp_domainUG_ne( a, b )
@@ -830,7 +889,8 @@ SUBROUTINE mpp_pass_SG_to_UG_3D(UG_domainObj, field_SG, field_UG)
   integer :: ioff, joff
   type(domainUG_private), pointer :: UG_domain=>NULL()
   type(domain2D_private), pointer :: SG_domain=>NULL()
-  
+ 
+  call check_domainUG_index(UG_domainObj, "mpp_pass_SG_to_UG_3D") 
   UG_domain => domainUGList(UG_domainObj%index)
   SG_domain => domainList(UG_domain%sg_domain_index)
 
@@ -902,6 +962,7 @@ SUBROUTINE mpp_pass_UG_to_SG_3D(UG_domainObj, field_UG, field_SG)
   type(domainUG_private), pointer :: UG_domain=>NULL()
   type(domain2D_private), pointer :: SG_domain=>NULL()
 
+  call check_domainUG_index(UG_domainObj, "mpp_pass_UG_to_SG_3D")
   UG_domain => domainUGList(UG_domainObj%index)
   SG_domain => domainList(UG_domain%sg_domain_index)
 
