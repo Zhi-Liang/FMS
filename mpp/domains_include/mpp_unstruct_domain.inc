@@ -408,6 +408,7 @@ return
      type(domainUG), intent(inout) :: UG_domain
      type(domain2d), intent(out)   :: SG_domain
 
+     call check_domainUG_index(UG_domain, "mpp_get_UG_SG_domain")
      SG_domain%index = domainUGList(UG_domain%index)%sg_domain_index
 
      return
